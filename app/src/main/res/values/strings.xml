@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">AiChatHelp</string>
+    <string name="message_placeholder">Message...</string>
+</resources>
