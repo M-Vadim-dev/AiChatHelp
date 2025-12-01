@@ -10,6 +10,10 @@ data class ChatRequestDto(
     @SerialName("max_tokens")
     val maxTokens: Int? = 20,
     val temperature: Double? = 0.2,
+    @SerialName("top_p")
+    val topP: Double? = null,
+    @SerialName("language_preference")
+    val languagePreference: String? = null,
     @SerialName("search_mode")
     val searchMode: String? = "web",
     @SerialName("return_images")
