@@ -2,4 +2,5 @@
 <resources>
     <string name="app_name">AiChatHelp</string>
     <string name="message_placeholder">Сообщение...</string>
+    <string name="empty_chat_text">Спроси меня о чём угодно</string>
 </resources>

@@ -23,8 +23,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.outlined.Face
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -90,25 +90,47 @@ private fun ChatScreenContent(
             .fillMaxSize()
             .padding(8.dp),
     ) {
-        LazyColumn(
+        Box(
             modifier = Modifier
                 .weight(1f)
-                .fillMaxWidth(),
-            state = listState,
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-            contentPadding = PaddingValues(vertical = 8.dp),
-            reverseLayout = true
+                .fillMaxWidth()
         ) {
-            if (loading) item { IndicatorBubble() }
+            if (messages.isEmpty()) {
+                Column(
+                    modifier = Modifier.align(Alignment.Center),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(
+                        modifier = Modifier.size(48.dp),
+                        imageVector = Icons.Outlined.Face,
+                        contentDescription = null,
+                        tint = RoyalBlue
+                    )
+                    Text(
+                        text = stringResource(R.string.empty_chat_text),
+                        fontSize = 22.sp
+                    )
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    state = listState,
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                    contentPadding = PaddingValues(vertical = 8.dp),
+                    reverseLayout = true
+                ) {
+                    if (loading) item { IndicatorBubble() }
 
-            items(messages.reversed()) { message -> MessageRow(message) }
+                    items(messages.reversed()) { message -> MessageRow(message) }
 
-            item {
-                Spacer(
-                    modifier = Modifier
-                        .fillParentMaxHeight()
-                        .weight(1f, fill = true)
-                )
+                    item {
+                        Spacer(
+                            modifier = Modifier
+                                .fillParentMaxHeight()
+
+                        )
+                    }
+                }
             }
         }
 
@@ -248,7 +270,7 @@ private fun Avatar(isUser: Boolean) {
         contentAlignment = Alignment.Center
     ) {
         Icon(
-            imageVector = if (isUser) Icons.Default.Person else Icons.Default.Face,
+            imageVector = if (isUser) Icons.Default.Person else Icons.Outlined.Face,
             contentDescription = null,
             tint = if (isUser) Color.DarkGray else Color.White,
             modifier = Modifier.size(20.dp)
