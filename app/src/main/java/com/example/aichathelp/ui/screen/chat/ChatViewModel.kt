@@ -42,16 +42,13 @@ class ChatViewModel @Inject constructor(
                 viewModelScope.launch {
                     try {
                         val fullResponse = sendQuestionUseCase(text)
-                        val (_, answer) = parseThinkAndAnswer(fullResponse.text)
-                        answer?.let {
-                            _state.value = _state.value.copy(
-                                messages = _state.value.messages + Message(
-                                    it,
-                                    time = LocalDateTime.now().toUiTime(),
-                                    isUser = false
-                                )
+                        _state.value = _state.value.copy(
+                            messages = _state.value.messages + Message(
+                                fullResponse.text,
+                                time = LocalDateTime.now().toUiTime(),
+                                isUser = false
                             )
-                        }
+                        )
                     } catch (e: Exception) {
                         _state.value = _state.value.copy(
                             messages = _state.value.messages + Message(
@@ -72,15 +69,4 @@ class ChatViewModel @Inject constructor(
         }
     }
 
-    private fun parseThinkAndAnswer(text: String): Pair<String?, String?> {
-        val regex = "<think>([\\s\\S]*?)</think>".toRegex()
-        val match = regex.find(text)
-        return if (match != null) {
-            val thinkPart = match.groupValues[1].trim()
-            val answerPart = text.replace(regex, "").trim()
-            Pair(thinkPart, answerPart)
-        } else {
-            Pair(null, text.trim())
-        }
-    }
 }

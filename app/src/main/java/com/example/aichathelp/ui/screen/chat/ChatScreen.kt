@@ -229,12 +229,11 @@ private fun MessageRow(message: Message) {
             modifier = Modifier
                 .background(if (message.isUser) Lavender else RoyalBlue, shape)
                 .padding(horizontal = 12.dp, vertical = 8.dp)
-                .widthIn(max = 300.dp)
+                .widthIn(max = 275.dp)
         ) {
             Column {
-                Text(
+                MarkdownText(
                     text = message.text,
-                    fontSize = 16.sp,
                     color = if (message.isUser) Color.Black else Color.White
                 )
 

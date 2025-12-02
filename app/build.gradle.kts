@@ -70,7 +70,7 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
-    implementation("androidx.compose.material:material-icons-core")
+    implementation(libs.androidx.compose.material.icons.core)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -86,4 +86,6 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.bundles.okhttp)
     implementation(libs.bundles.retrofit)
+
+    implementation(libs.commonmark)
 }
