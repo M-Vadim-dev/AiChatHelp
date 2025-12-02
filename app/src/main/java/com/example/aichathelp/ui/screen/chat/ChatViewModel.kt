@@ -2,7 +2,9 @@ package com.example.aichathelp.ui.screen.chat
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.aichathelp.domain.model.ChatAnswer
 import com.example.aichathelp.domain.model.Message
+import com.example.aichathelp.domain.model.MessageType
 import com.example.aichathelp.domain.usecase.SendQuestionUseCase
 import com.example.aichathelp.ui.util.toUiTime
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -22,51 +24,92 @@ class ChatViewModel @Inject constructor(
 
     fun onIntent(intent: ChatIntent) {
         when (intent) {
-            is ChatIntent.InputChanged -> {
-                _state.value = _state.value.copy(input = intent.text)
-            }
+            is ChatIntent.InputChanged -> updateInput(intent.text)
+            ChatIntent.SendClicked -> sendQuestion()
+            ChatIntent.ErrorShown -> clearError()
+            ChatIntent.RetryClicked -> retryLastQuestion()
+        }
+    }
 
-            ChatIntent.SendClicked -> {
-                val text = _state.value.input
-                if (text.isBlank()) return
-                _state.value = _state.value.copy(
-                    messages = _state.value.messages + Message(
-                        text = text,
-                        time = LocalDateTime.now().toUiTime(),
-                        isUser = true
-                    ),
-                    input = "",
-                    isLoading = true
-                )
+    private fun updateInput(text: String) {
+        _state.value = _state.value.copy(input = text)
+    }
 
-                viewModelScope.launch {
-                    try {
-                        val fullResponse = sendQuestionUseCase(text)
-                        _state.value = _state.value.copy(
-                            messages = _state.value.messages + Message(
-                                fullResponse.text,
-                                time = LocalDateTime.now().toUiTime(),
-                                isUser = false
-                            )
-                        )
-                    } catch (e: Exception) {
-                        _state.value = _state.value.copy(
-                            messages = _state.value.messages + Message(
-                                "Error: ${e.message}",
-                                time = LocalDateTime.now().toUiTime(),
-                                isUser = false
-                            )
-                        )
-                    } finally {
-                        _state.value = _state.value.copy(isLoading = false)
-                    }
-                }
-            }
+    private fun sendQuestion() {
+        val text = _state.value.input
+        if (text.isBlank()) return
 
-            ChatIntent.ErrorShown -> {
-                _state.value = _state.value.copy(error = null)
+        appendUserMessage(text)
+
+        _state.value = _state.value.copy(isLoading = true)
+
+        viewModelScope.launch {
+            try {
+                val response = sendQuestionUseCase(text)
+                val messages = splitToMessages(response)
+                appendMessages(messages)
+            } catch (e: Exception) {
+                appendMessages(listOf(buildErrorMessage(e.message ?: "Unknown error")))
+            } finally {
+                _state.value = _state.value.copy(isLoading = false)
             }
         }
+    }
+
+    private fun clearError() {
+        _state.value = _state.value.copy(error = null)
+    }
+
+    private fun retryLastQuestion() {
+        val lastUserMessage = _state.value.messages.lastOrNull { it.isUser }?.text
+        lastUserMessage?.let {
+            _state.value = _state.value.copy(input = it)
+            sendQuestion()
+        }
+    }
+
+    private fun appendUserMessage(text: String) {
+        val message = Message(
+            text = text,
+            time = LocalDateTime.now().toUiTime(),
+            isUser = true,
+            type = MessageType.Answer
+        )
+        _state.value = _state.value.copy(
+            messages = _state.value.messages + message,
+            input = ""
+        )
+    }
+
+    private fun appendMessages(messages: List<Message>) {
+        _state.value = _state.value.copy(
+            messages = _state.value.messages + messages
+        )
+    }
+
+    private fun splitToMessages(a: ChatAnswer): List<Message> {
+        val time = LocalDateTime.now().toUiTime()
+        val messages = mutableListOf<Message>()
+
+        a.answer.takeIf { it.isNotBlank() }?.let {
+            messages += Message(it, time, isUser = false, type = MessageType.Answer)
+        }
+
+        a.question.takeIf { it.isNotBlank() }?.let {
+            messages += Message(it, time, isUser = false, type = MessageType.Question)
+        }
+
+        return messages
+    }
+
+    private fun buildErrorMessage(message: String): Message {
+        return Message(
+            text = message,
+            time = LocalDateTime.now().toUiTime(),
+            isUser = false,
+            type = MessageType.Error(message),
+            isError = true
+        )
     }
 
 }

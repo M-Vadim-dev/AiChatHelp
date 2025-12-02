@@ -88,4 +88,6 @@ dependencies {
     implementation(libs.bundles.retrofit)
 
     implementation(libs.commonmark)
+
+    implementation(libs.coil)
 }

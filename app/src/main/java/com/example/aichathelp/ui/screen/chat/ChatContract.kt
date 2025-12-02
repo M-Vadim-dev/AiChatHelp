@@ -13,4 +13,5 @@ sealed class ChatIntent {
     data class InputChanged(val text: String) : ChatIntent()
     object SendClicked : ChatIntent()
     object ErrorShown : ChatIntent()
+    object RetryClicked : ChatIntent()
 }
