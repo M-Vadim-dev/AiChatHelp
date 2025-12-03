@@ -53,13 +53,13 @@ class ChatViewModel @Inject constructor(
                     chatContext = chatContext
                 )
 
-                chatContext = chatContext.copy(
-                    state = response.state,
-                    answers = if (response.answer.isNotBlank()) {
-                        chatContext.answers + mapOf(response.question to response.answer)
-                    } else chatContext.answers
-                )
+                val newAnswers = if (response.question.isNotBlank()) {
+                    chatContext.answers + mapOf(response.question to text)
+                } else chatContext.answers
 
+                chatContext = chatContext.copy(state = response.state, answers = newAnswers)
+
+                println("Accumulated: ${chatContext.answers.size} answers")
                 appendChatStep(response)
             } catch (e: Exception) {
                 appendMessages(listOf(buildErrorMessage(e.message ?: "Unknown error")))

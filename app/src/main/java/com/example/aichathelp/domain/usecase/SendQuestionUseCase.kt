@@ -20,9 +20,10 @@ class SendQuestionUseCase @Inject constructor(
     ): ChatStep {
         require(userMessage.isNotBlank()) { "User message must not be blank" }
 
-        val contextJson = json.encodeToString(ChatContext.serializer(), chatContext)
-
-        val userContent = "Контекст чата: $contextJson\n\nВопрос: $userMessage"
+        val userContent = """
+          КОНТЕКСТ: ${json.encodeToString(ChatContext.serializer(), chatContext)}
+          Пользователь ответил: $userMessage
+        """.trimIndent()
 
         val messages = listOf(
             ChatMessageDto(role = ChatRole.SYSTEM.value, content = PROMPT_JSON_RESPONSE),
@@ -33,8 +34,8 @@ class SendQuestionUseCase @Inject constructor(
             model = "sonar",
             messages = messages,
             maxTokens = 300,
-            temperature = 0.4,
-            topP = 0.4,
+            temperature = 0.2,
+            topP = 0.2,
             languagePreference = "russian",
             searchMode = "web",
             returnImages = false,
