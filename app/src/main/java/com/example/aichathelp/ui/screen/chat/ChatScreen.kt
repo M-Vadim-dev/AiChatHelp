@@ -216,43 +216,40 @@ private fun MessageRow(
     isNew: Boolean = false,
     onRetry: ((Message) -> Unit)? = null,
 ) {
-    var visible by remember { mutableStateOf(!isNew) }
+    val messageKey = remember(message.text, message.time) {
+        "${message.text}_${message.time}_${message.isUser}"
+    }
+    var hasAnimated by remember(messageKey) { mutableStateOf(false) }
 
-    LaunchedEffect(isNew) {
-        if (isNew) {
-            delay(if (message.type is MessageType.Question) 1000L else 0L)
-            visible = true
+    LaunchedEffect(isNew, messageKey) {
+        if (isNew && !hasAnimated) {
+            delay(if (message.type is MessageType.Question) 2000L else 0L)
+            hasAnimated = true
         }
     }
 
-    AnimatedVisibility(
-        visible = visible,
-        enter = fadeIn(),
-        exit = fadeOut()
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 6.dp, vertical = 4.dp),
+        horizontalArrangement = if (message.isUser) Arrangement.End else Arrangement.Start,
+        verticalAlignment = Alignment.Bottom
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 6.dp, vertical = 4.dp),
-            horizontalArrangement = if (message.isUser) Arrangement.End else Arrangement.Start,
-            verticalAlignment = Alignment.Bottom
-        ) {
-            if (!message.isUser) {
-                Avatar(isUser = false)
-                Spacer(modifier = Modifier.width(6.dp))
-            }
+        if (!message.isUser) {
+            Avatar(isUser = false)
+            Spacer(modifier = Modifier.width(6.dp))
+        }
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                MessageContent(message)
-                if (message.isError && onRetry != null) {
-                    RetryButton(message, onRetry)
-                }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            MessageContent(message)
+            if (message.isError && onRetry != null) {
+                RetryButton(message, onRetry)
             }
+        }
 
-            if (message.isUser) {
-                Spacer(modifier = Modifier.width(6.dp))
-                Avatar(isUser = true)
-            }
+        if (message.isUser) {
+            Spacer(modifier = Modifier.width(6.dp))
+            Avatar(isUser = true)
         }
     }
 }
@@ -313,7 +310,7 @@ else
 private fun getBackgroundColor(message: Message) = when {
     message.isUser -> Lavender
     message.isError -> Pink
-    message.type is MessageType.Question -> BlueViolet
+    message.type is MessageType.Question -> RoyalBlue
     else -> RoyalBlue
 }
 

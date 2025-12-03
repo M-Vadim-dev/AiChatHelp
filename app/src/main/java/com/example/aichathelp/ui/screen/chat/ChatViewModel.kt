@@ -2,7 +2,8 @@ package com.example.aichathelp.ui.screen.chat
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.aichathelp.domain.model.ChatAnswer
+import com.example.aichathelp.domain.model.ChatContext
+import com.example.aichathelp.domain.model.ChatStep
 import com.example.aichathelp.domain.model.Message
 import com.example.aichathelp.domain.model.MessageType
 import com.example.aichathelp.domain.usecase.SendQuestionUseCase
@@ -21,6 +22,8 @@ class ChatViewModel @Inject constructor(
 
     private val _state = MutableStateFlow(ChatState())
     val state: StateFlow<ChatState> = _state
+
+    private var chatContext = ChatContext()
 
     fun onIntent(intent: ChatIntent) {
         when (intent) {
@@ -45,9 +48,19 @@ class ChatViewModel @Inject constructor(
 
         viewModelScope.launch {
             try {
-                val response = sendQuestionUseCase(text)
-                val messages = splitToMessages(response)
-                appendMessages(messages)
+                val response: ChatStep = sendQuestionUseCase(
+                    userMessage = text,
+                    chatContext = chatContext
+                )
+
+                chatContext = chatContext.copy(
+                    state = response.state,
+                    answers = if (response.answer.isNotBlank()) {
+                        chatContext.answers + mapOf(response.question to response.answer)
+                    } else chatContext.answers
+                )
+
+                appendChatStep(response)
             } catch (e: Exception) {
                 appendMessages(listOf(buildErrorMessage(e.message ?: "Unknown error")))
             } finally {
@@ -81,25 +94,35 @@ class ChatViewModel @Inject constructor(
         )
     }
 
+    private fun appendChatStep(step: ChatStep) {
+        val time = LocalDateTime.now().toUiTime()
+        val messages = mutableListOf<Message>()
+
+        step.answer.takeIf { it.isNotBlank() }?.let {
+            messages += Message(
+                text = it,
+                time = time,
+                isUser = false,
+                type = MessageType.Answer
+            )
+        }
+
+        step.question.takeIf { it.isNotBlank() }?.let {
+            messages += Message(
+                text = it,
+                time = time,
+                isUser = false,
+                type = MessageType.Question
+            )
+        }
+
+        appendMessages(messages)
+    }
+
     private fun appendMessages(messages: List<Message>) {
         _state.value = _state.value.copy(
             messages = _state.value.messages + messages
         )
-    }
-
-    private fun splitToMessages(a: ChatAnswer): List<Message> {
-        val time = LocalDateTime.now().toUiTime()
-        val messages = mutableListOf<Message>()
-
-        a.answer.takeIf { it.isNotBlank() }?.let {
-            messages += Message(it, time, isUser = false, type = MessageType.Answer)
-        }
-
-        a.question.takeIf { it.isNotBlank() }?.let {
-            messages += Message(it, time, isUser = false, type = MessageType.Question)
-        }
-
-        return messages
     }
 
     private fun buildErrorMessage(message: String): Message {
