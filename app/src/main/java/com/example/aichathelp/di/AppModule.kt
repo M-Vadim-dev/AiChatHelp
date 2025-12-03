@@ -1,6 +1,8 @@
 package com.example.aichathelp.di
 
 import com.example.aichathelp.BuildConfig
+import com.example.aichathelp.data.mapper.ChatRequestMapper
+import com.example.aichathelp.data.mapper.JsonResponseMapper
 import com.example.aichathelp.data.remote.ChatApi
 import dagger.Module
 import dagger.Provides
@@ -24,7 +26,6 @@ object AppModule {
     @Singleton
     fun provideJson(): Json = Json {
         ignoreUnknownKeys = true
-        prettyPrint = true
         isLenient = true
     }
 
@@ -63,9 +64,14 @@ object AppModule {
             .build()
     }
 
-
     @Provides
     @Singleton
     fun provideChatApi(retrofit: Retrofit): ChatApi = retrofit.create(ChatApi::class.java)
+
+    @Provides
+    fun provideJsonResponseMapper(json: Json): JsonResponseMapper = JsonResponseMapper(json)
+
+    @Provides
+    fun provideRequestMapper(json: Json): ChatRequestMapper = ChatRequestMapper(json)
 
 }

@@ -55,7 +55,6 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.example.aichathelp.R
 import com.example.aichathelp.domain.model.Message
 import com.example.aichathelp.domain.model.MessageType
-import com.example.aichathelp.ui.theme.BlueViolet
 import com.example.aichathelp.ui.theme.Lavender
 import com.example.aichathelp.ui.theme.Pink
 import com.example.aichathelp.ui.theme.RoyalBlue
@@ -242,7 +241,7 @@ private fun MessageRow(
 
         Row(verticalAlignment = Alignment.CenterVertically) {
             MessageContent(message)
-            if (message.isError && onRetry != null) {
+            if (message.type is MessageType.Error && onRetry != null) {
                 RetryButton(message, onRetry)
             }
         }
@@ -274,7 +273,7 @@ private fun MessageContent(message: Message) {
 private fun MessageText(message: Message) {
     Column {
         Text(
-            text = message.text.orEmpty(),
+            text = message.text,
             color = getTextColor(message),
             fontSize = 16.sp
         )
@@ -309,14 +308,14 @@ else
 
 private fun getBackgroundColor(message: Message) = when {
     message.isUser -> Lavender
-    message.isError -> Pink
+    message.type is MessageType.Error -> Pink
     message.type is MessageType.Question -> RoyalBlue
     else -> RoyalBlue
 }
 
 private fun getTextColor(message: Message) = when {
     message.isUser -> Color.Black
-    message.isError -> Color.Red
+    message.type is MessageType.Error -> Color.Red
     else -> Color.White
 }
 

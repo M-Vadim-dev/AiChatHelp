@@ -2,11 +2,13 @@ package com.example.aichathelp.ui.screen.chat
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.aichathelp.domain.model.ChatConfig
 import com.example.aichathelp.domain.model.ChatContext
 import com.example.aichathelp.domain.model.ChatStep
 import com.example.aichathelp.domain.model.Message
 import com.example.aichathelp.domain.model.MessageType
 import com.example.aichathelp.domain.usecase.SendQuestionUseCase
+import com.example.aichathelp.domain.util.ChatPrompts.PROMPT_JSON_RESPONSE
 import com.example.aichathelp.ui.util.toUiTime
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -44,25 +46,39 @@ class ChatViewModel @Inject constructor(
 
         appendUserMessage(text)
 
-        _state.value = _state.value.copy(isLoading = true)
+        _state.value = _state.value.copy(isLoading = true, error = null)
+
+        val config = ChatConfig.creative()
 
         viewModelScope.launch {
             try {
-                val response: ChatStep = sendQuestionUseCase(
+                val result = sendQuestionUseCase(
                     userMessage = text,
-                    chatContext = chatContext
+                    chatContext = chatContext,
+                    systemPrompt = PROMPT_JSON_RESPONSE,
+                    config = config
                 )
 
-                val newAnswers = if (response.question.isNotBlank()) {
-                    chatContext.answers + mapOf(response.question to text)
-                } else chatContext.answers
+                result
+                    .onSuccess { response ->
+                        val newAnswers = if (response.question.isNotBlank()) {
+                            chatContext.answers + mapOf(response.question to text)
+                        } else chatContext.answers
 
-                chatContext = chatContext.copy(state = response.state, answers = newAnswers)
+                        chatContext = chatContext.copy(
+                            state = response.state,
+                            answers = newAnswers
+                        )
 
-                println("Accumulated: ${chatContext.answers.size} answers")
-                appendChatStep(response)
-            } catch (e: Exception) {
-                appendMessages(listOf(buildErrorMessage(e.message ?: "Unknown error")))
+                        appendChatStep(response)
+                    }
+                    .onFailure { error ->
+                        appendMessages(
+                            listOf(
+                                buildErrorMessage(error.message ?: "Unknown error")
+                            )
+                        )
+                    }
             } finally {
                 _state.value = _state.value.copy(isLoading = false)
             }
@@ -131,7 +147,6 @@ class ChatViewModel @Inject constructor(
             time = LocalDateTime.now().toUiTime(),
             isUser = false,
             type = MessageType.Error(message),
-            isError = true
         )
     }
 
