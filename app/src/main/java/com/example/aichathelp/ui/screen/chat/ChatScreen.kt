@@ -24,11 +24,8 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -44,7 +41,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
@@ -55,6 +54,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.example.aichathelp.R
 import com.example.aichathelp.domain.model.Message
 import com.example.aichathelp.domain.model.MessageType
+import com.example.aichathelp.domain.model.PromptType
 import com.example.aichathelp.ui.theme.Lavender
 import com.example.aichathelp.ui.theme.Pink
 import com.example.aichathelp.ui.theme.RoyalBlue
@@ -79,9 +79,13 @@ fun ChatScreen(
         messages = state.messages,
         loading = state.isLoading,
         input = state.input,
+        selectedMode = state.currentPromptType,
         onInputChange = { viewModel.onIntent(ChatIntent.InputChanged(it)) },
         onSendClick = { viewModel.onIntent(ChatIntent.SendClicked) },
         onRetryClick = { viewModel.onIntent(ChatIntent.RetryClicked) },
+        onModeSelected = { promptType ->
+            viewModel.onIntent(ChatIntent.PromptTypeChanged(promptType))
+        },
         listState = listState,
         modifier = modifier,
     )
@@ -93,16 +97,20 @@ private fun ChatScreenContent(
     messages: List<Message>,
     loading: Boolean,
     input: String,
+    selectedMode: PromptType,
     onInputChange: (String) -> Unit,
     onSendClick: () -> Unit,
     onRetryClick: (Message) -> Unit,
+    onModeSelected: (PromptType) -> Unit,
     listState: LazyListState,
 ) {
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(8.dp),
+            .padding(4.dp),
     ) {
+        ModeSelection(selectedMode = selectedMode, onModeSelected = onModeSelected)
+
         Box(
             modifier = Modifier
                 .weight(1f)
@@ -165,35 +173,45 @@ private fun MessageInput(
     onSendClick: () -> Unit,
     sendingDisabled: Boolean,
 ) {
+    val focusManager = LocalFocusManager.current
+    var isFocused by remember { mutableStateOf(false) }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 12.dp),
+            .padding(4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         TextField(
             value = input,
             onValueChange = onInputChange,
-            modifier = Modifier.weight(1f),
-            placeholder = { Text(stringResource(R.string.message_placeholder)) },
+            modifier = Modifier
+                .weight(1f)
+                .onFocusChanged { isFocused = it.isFocused },
+            placeholder = { if (!isFocused) Text(stringResource(R.string.message_placeholder)) },
             singleLine = true,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+            keyboardActions = KeyboardActions(
+                onSend = {
+                    onSendClick()
+                    focusManager.clearFocus()
+                }
+            ),
             shape = RoundedCornerShape(24.dp),
             colors = TextFieldDefaults.colors(
                 focusedContainerColor = Lavender,
                 unfocusedContainerColor = Lavender,
-                unfocusedPlaceholderColor = Color(0xFF666666),
+                unfocusedPlaceholderColor = Color.DarkGray,
                 focusedPlaceholderColor = Color(0xFF444444),
                 focusedIndicatorColor = Color.Transparent,
                 unfocusedIndicatorColor = Color.Transparent
             )
         )
-
+        Spacer(modifier = Modifier.width(4.dp))
         IconButton(
             enabled = input.isNotBlank() && !sendingDisabled,
             onClick = onSendClick,
             modifier = Modifier
-                .padding(start = 4.dp)
                 .background(
                     color = if (input.isNotBlank() && !sendingDisabled) RoyalBlue else Lavender,
                     shape = CircleShape
@@ -201,9 +219,10 @@ private fun MessageInput(
                 .size(54.dp)
         ) {
             Icon(
-                imageVector = Icons.AutoMirrored.Filled.Send,
+                modifier = Modifier.size(32.dp),
+                painter = painterResource(R.drawable.ic_send),
                 contentDescription = null,
-                tint = if (input.isNotBlank()) Color.White else Color(0xFF666666)
+                tint = if (input.isNotBlank()) Color.White else Color.DarkGray,
             )
         }
     }
@@ -230,13 +249,13 @@ private fun MessageRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 6.dp, vertical = 4.dp),
+            .padding(horizontal = 2.dp),
         horizontalArrangement = if (message.isUser) Arrangement.End else Arrangement.Start,
         verticalAlignment = Alignment.Bottom
     ) {
         if (!message.isUser) {
             Avatar(isUser = false)
-            Spacer(modifier = Modifier.width(6.dp))
+            Spacer(modifier = Modifier.width(4.dp))
         }
 
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -247,7 +266,7 @@ private fun MessageRow(
         }
 
         if (message.isUser) {
-            Spacer(modifier = Modifier.width(6.dp))
+            Spacer(modifier = Modifier.width(4.dp))
             Avatar(isUser = true)
         }
     }
@@ -294,7 +313,7 @@ private fun RetryButton(message: Message, onRetry: (Message) -> Unit) {
     Spacer(modifier = Modifier.width(4.dp))
     IconButton(onClick = { onRetry(message) }, modifier = Modifier.size(28.dp)) {
         Icon(
-            imageVector = Icons.Filled.Refresh,
+            painter = painterResource(R.drawable.ic_refresh),
             contentDescription = null,
             tint = Color.Red
         )
@@ -329,7 +348,7 @@ private fun Avatar(isUser: Boolean) {
     ) {
         if (isUser) {
             Icon(
-                imageVector = Icons.Default.Person,
+                painter = painterResource(R.drawable.ic_person),
                 contentDescription = null,
                 tint = Color.DarkGray,
                 modifier = Modifier.size(24.dp)
@@ -354,7 +373,7 @@ private fun IndicatorBubble(visible: Boolean) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 6.dp),
+                .padding(horizontal = 2.dp),
             contentAlignment = Alignment.CenterStart
         ) {
             Box(
@@ -406,7 +425,13 @@ private fun ChatScreenContentPreview() {
             isUser = true,
             time = LocalDateTime.now().minusMinutes(1).toUiTime(),
             type = MessageType.Answer
-        )
+        ),
+        Message(
+            text = "Ошибка",
+            isUser = false,
+            time = LocalDateTime.now().minusMinutes(1).toUiTime(),
+            type = MessageType.Error("")
+        ),
     )
 
     ChatScreenContent(
@@ -416,6 +441,8 @@ private fun ChatScreenContentPreview() {
         onInputChange = {},
         onSendClick = {},
         onRetryClick = {},
-        listState = rememberLazyListState()
+        listState = rememberLazyListState(),
+        selectedMode = PromptType.PROFESSIONAL,
+        onModeSelected = {},
     )
 }

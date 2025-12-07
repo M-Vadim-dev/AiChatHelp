@@ -1,9 +1,12 @@
 package com.example.aichathelp.di
 
 import com.example.aichathelp.BuildConfig
+import com.example.aichathelp.data.config.ChatPrompts
 import com.example.aichathelp.data.mapper.ChatRequestMapper
 import com.example.aichathelp.data.mapper.JsonResponseMapper
 import com.example.aichathelp.data.remote.ChatApi
+import com.example.aichathelp.data.repository.PromptRepositoryImpl
+import com.example.aichathelp.domain.repository.PromptRepository
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -73,5 +76,9 @@ object AppModule {
 
     @Provides
     fun provideRequestMapper(json: Json): ChatRequestMapper = ChatRequestMapper(json)
+
+    @Provides
+    @Singleton
+    fun providePromptRepository(): PromptRepository = PromptRepositoryImpl(ChatPrompts)
 
 }

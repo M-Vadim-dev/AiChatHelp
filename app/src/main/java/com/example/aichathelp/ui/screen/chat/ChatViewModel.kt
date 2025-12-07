@@ -7,8 +7,9 @@ import com.example.aichathelp.domain.model.ChatContext
 import com.example.aichathelp.domain.model.ChatStep
 import com.example.aichathelp.domain.model.Message
 import com.example.aichathelp.domain.model.MessageType
+import com.example.aichathelp.domain.model.PromptType
+import com.example.aichathelp.domain.repository.PromptRepository
 import com.example.aichathelp.domain.usecase.SendQuestionUseCase
-import com.example.aichathelp.domain.util.ChatPrompts.PROMPT_JSON_RESPONSE
 import com.example.aichathelp.ui.util.toUiTime
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,7 +20,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class ChatViewModel @Inject constructor(
-    private val sendQuestionUseCase: SendQuestionUseCase
+    private val sendQuestionUseCase: SendQuestionUseCase,
+    private val promptRepository: PromptRepository,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(ChatState())
@@ -33,7 +35,12 @@ class ChatViewModel @Inject constructor(
             ChatIntent.SendClicked -> sendQuestion()
             ChatIntent.ErrorShown -> clearError()
             ChatIntent.RetryClicked -> retryLastQuestion()
+            is ChatIntent.PromptTypeChanged -> updatePromptType(intent.promptType)
         }
+    }
+
+    private fun updatePromptType(type: PromptType) {
+        _state.value = _state.value.copy(currentPromptType = type)
     }
 
     private fun updateInput(text: String) {
@@ -49,13 +56,14 @@ class ChatViewModel @Inject constructor(
         _state.value = _state.value.copy(isLoading = true, error = null)
 
         val config = ChatConfig.creative()
+        val promptText = getPrompt(_state.value.currentPromptType)
 
         viewModelScope.launch {
             try {
                 val result = sendQuestionUseCase(
                     userMessage = text,
                     chatContext = chatContext,
-                    systemPrompt = PROMPT_JSON_RESPONSE,
+                    systemPrompt = promptText,
                     config = config
                 )
 
@@ -95,6 +103,11 @@ class ChatViewModel @Inject constructor(
             _state.value = _state.value.copy(input = it)
             sendQuestion()
         }
+    }
+
+    private fun getPrompt(type: PromptType): String = when (type) {
+        PromptType.PROFESSIONAL -> promptRepository.getFsmPrompt()
+        PromptType.CREATIVE -> promptRepository.getCreativePrompt()
     }
 
     private fun appendUserMessage(text: String) {
