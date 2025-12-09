@@ -1,6 +1,5 @@
 package com.example.aichathelp.data.repository
 
-import android.util.Log
 import com.example.aichathelp.data.mapper.ChatRequestMapper
 import com.example.aichathelp.data.mapper.JsonResponseMapper
 import com.example.aichathelp.data.remote.ChatApi
@@ -32,7 +31,6 @@ class ChatRepositoryImpl @Inject constructor(
         val rawJson = responseDto.choices.firstOrNull()?.message?.content ?: "{}"
 
         val cleaned = responseMapper.cleanRawResponse(rawJson)
-        Log.d("!!!", cleaned)
 
         return json.decodeFromString(ChatStep.serializer(), cleaned)
     }

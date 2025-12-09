@@ -2,15 +2,13 @@ package com.example.aichathelp.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val Purple80 = Color(0xFFD0BCFF)
-val PurpleGrey80 = Color(0xFFCCC2DC)
-val Pink80 = Color(0xFFEFB8C8)
-
-val Purple40 = Color(0xFF6650a4)
-val PurpleGrey40 = Color(0xFF625b71)
-val Pink40 = Color(0xFF7D5260)
-
-val Pink = Color(0xFFFFCDD2)
+val White = Color(0xFFFAFAFA)
 val Lavender = Color(0xFFE9E8ED)
-val RoyalBlue = Color(0xFF376BF5)
-val BlueViolet = Color(0xFF5E35B1)
+val Slate = Color(0xFF64748B)
+val SkyBlue = Color(0xFF4DA8FF)
+val DodgerBlue = Color(0xFF0082FB)
+val RoyalBlue = Color(0xFF0064E0)
+val MidnightBlue = Color(0xFF1C2B33)
+val DarkBlue = Color(0xFF0A1A2A)
+val Pink = Color(0xFFFFCDD2)
+val Crimson = Color(0xFFDC2717)

@@ -10,6 +10,7 @@ import com.example.aichathelp.domain.model.MessageType
 import com.example.aichathelp.domain.model.PromptType
 import com.example.aichathelp.domain.repository.PromptRepository
 import com.example.aichathelp.domain.usecase.SendQuestionUseCase
+import com.example.aichathelp.ui.screen.chat.model.MessageUi
 import com.example.aichathelp.ui.util.toUiTime
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -36,6 +37,10 @@ class ChatViewModel @Inject constructor(
             ChatIntent.ErrorShown -> clearError()
             ChatIntent.RetryClicked -> retryLastQuestion()
             is ChatIntent.PromptTypeChanged -> updatePromptType(intent.promptType)
+            ChatIntent.ClearChat -> clearChatHistory()
+            is ChatIntent.TemperatureChanged -> updateTemperature(intent.value)
+            is ChatIntent.TopPChanged -> updateTopP(intent.value)
+            ChatIntent.ResetConfigClicked -> resetConfig()
         }
     }
 
@@ -43,8 +48,34 @@ class ChatViewModel @Inject constructor(
         _state.value = _state.value.copy(currentPromptType = type)
     }
 
+    private fun clearChatHistory() {
+        chatContext = ChatContext()
+        _state.value = _state.value.copy(
+            messages = emptyList(),
+            input = "",
+            error = null,
+        )
+    }
+
+    private fun resetConfig() {
+        val defaultConfig = ChatConfig.default()
+        _state.value = _state.value.copy(
+            currentPromptType = ChatState().currentPromptType,
+            temperature = defaultConfig.temperature,
+            topP = defaultConfig.topP,
+        )
+    }
+
     private fun updateInput(text: String) {
         _state.value = _state.value.copy(input = text)
+    }
+
+    private fun updateTemperature(value: Double) {
+        _state.value = _state.value.copy(temperature = value)
+    }
+
+    private fun updateTopP(value: Double) {
+        _state.value = _state.value.copy(topP = value)
     }
 
     private fun sendQuestion() {
@@ -55,7 +86,12 @@ class ChatViewModel @Inject constructor(
 
         _state.value = _state.value.copy(isLoading = true, error = null)
 
-        val config = ChatConfig.creative()
+        val baseConfig = ChatConfig.creative()
+        val config = baseConfig.copy(
+            temperature = _state.value.temperature,
+            topP = _state.value.topP
+        )
+
         val promptText = getPrompt(_state.value.currentPromptType)
 
         viewModelScope.launch {
@@ -114,53 +150,58 @@ class ChatViewModel @Inject constructor(
         val message = Message(
             text = text,
             time = LocalDateTime.now().toUiTime(),
-            isUser = true,
             type = MessageType.Answer
         )
+        val messageUi = MessageUi.fromDomain(
+            message,
+            isUser = true,
+            isSending = true
+        ).copy(hasAnimated = false)
+
         _state.value = _state.value.copy(
-            messages = _state.value.messages + message,
+            messages = _state.value.messages + messageUi,
             input = ""
         )
     }
 
     private fun appendChatStep(step: ChatStep) {
+        val updatedMessages = _state.value.messages.mapIndexed { _, msg ->
+            if (msg.isUser && msg.isSending) {
+                msg.copy(isSending = false, hasAnimated = false)
+            } else msg
+        }
+
+        _state.value = _state.value.copy(messages = updatedMessages)
+
         val time = LocalDateTime.now().toUiTime()
-        val messages = mutableListOf<Message>()
+        val messages = mutableListOf<MessageUi>()
 
         step.answer.takeIf { it.isNotBlank() }?.let {
-            messages += Message(
-                text = it,
-                time = time,
-                isUser = false,
-                type = MessageType.Answer
-            )
+            val msg = Message(text = it, time = time, type = MessageType.Answer)
+            messages += MessageUi.fromDomain(msg, isUser = false).copy(hasAnimated = false)
         }
 
         step.question.takeIf { it.isNotBlank() }?.let {
-            messages += Message(
-                text = it,
-                time = time,
-                isUser = false,
-                type = MessageType.Question
-            )
+            val msg = Message(text = it, time = time, type = MessageType.Question)
+            messages += MessageUi.fromDomain(msg, isUser = false).copy(hasAnimated = false)
         }
 
         appendMessages(messages)
     }
 
-    private fun appendMessages(messages: List<Message>) {
+    private fun appendMessages(messages: List<MessageUi>) {
         _state.value = _state.value.copy(
             messages = _state.value.messages + messages
         )
     }
 
-    private fun buildErrorMessage(message: String): Message {
-        return Message(
+    private fun buildErrorMessage(message: String): MessageUi {
+        val msg = Message(
             text = message,
             time = LocalDateTime.now().toUiTime(),
-            isUser = false,
-            type = MessageType.Error(message),
+            type = MessageType.Error(message)
         )
+        return MessageUi.fromDomain(message = msg, isUser = false)
     }
 
 }

@@ -89,4 +89,6 @@ dependencies {
     implementation(libs.commonmark)
 
     implementation(libs.coil)
+
+    implementation(libs.haze)
 }

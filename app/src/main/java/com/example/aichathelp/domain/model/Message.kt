@@ -9,6 +9,5 @@ sealed class MessageType {
 data class Message(
     val text: String,
     val time: String,
-    val isUser: Boolean,
     val type: MessageType,
 )
