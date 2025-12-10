@@ -1,7 +1,7 @@
 package com.example.aichathelp.data.remote
 
-import com.example.aichathelp.data.remote.dto.perplexity.ChatRequestDto
-import com.example.aichathelp.data.remote.dto.perplexity.ChatResponseDto
+import com.example.aichathelp.data.remote.dto.ChatRequestDto
+import com.example.aichathelp.data.remote.dto.ChatResponseDto
 import retrofit2.http.Body
 import retrofit2.http.POST
 

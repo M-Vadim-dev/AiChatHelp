@@ -1,4 +1,4 @@
-package com.example.aichathelp.data.remote.dto.perplexity
+package com.example.aichathelp.data.remote.dto
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable

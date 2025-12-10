@@ -1,7 +1,7 @@
 package com.example.aichathelp.data.mapper
 
-import com.example.aichathelp.data.remote.dto.perplexity.ChatMessageDto
-import com.example.aichathelp.data.remote.dto.perplexity.ChatRequestDto
+import com.example.aichathelp.data.remote.dto.ChatMessageDto
+import com.example.aichathelp.data.remote.dto.ChatRequestDto
 import com.example.aichathelp.domain.model.ChatConfig
 import com.example.aichathelp.domain.model.ChatContext
 import com.example.aichathelp.domain.model.ChatRole

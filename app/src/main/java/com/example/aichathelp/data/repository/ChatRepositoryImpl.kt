@@ -44,8 +44,8 @@ class ChatRepositoryImpl @Inject constructor(
 
         val chatStep = json.decodeFromString(ChatStep.serializer(), cleanedJson)
 
-        val tokensSpent = responseDto.usage.totalTokens.takeIf { it > 0 }
-        val costSpent = responseDto.usage.cost.totalCost.takeIf { it > 0 }
+        val tokensSpent = responseDto.usage.totalTokens
+        val costSpent = responseDto.usage.cost?.totalCost
 
         return chatStep.copy(tokensSpent = tokensSpent, costSpent = costSpent, requestDuration = durationSec)
     }
