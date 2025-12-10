@@ -31,12 +31,20 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        val apiKey = System.getenv("API_KEY")
+        val perplexityKey = System.getenv("PERPLEXITY_API_KEY")
             ?: Properties().apply {
                 load(rootProject.file("local.properties").inputStream())
-            }.getProperty("API_KEY")
+            }.getProperty("PERPLEXITY_API_KEY")
             ?: throw GradleException("API_KEY is missing!")
-        buildConfigField("String", "API_KEY", "\"$apiKey\"")
+        buildConfigField("String", "PERPLEXITY_API_KEY", "\"$perplexityKey\"")
+
+        val deepSeekKey = System.getenv("DEEPSEEK_API_KEY")
+            ?: Properties().apply {
+                load(rootProject.file("local.properties").inputStream())
+            }.getProperty("DEEPSEEK_API_KEY")
+            ?: throw GradleException("DEEPSEEK_API_KEY is missing!")
+
+        buildConfigField("String", "DEEPSEEK_API_KEY", "\"$deepSeekKey\"")
     }
 
     buildTypes {

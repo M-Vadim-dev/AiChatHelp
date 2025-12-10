@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.sp
 import com.example.aichathelp.R
 import com.example.aichathelp.domain.model.MessageType
 import com.example.aichathelp.ui.screen.chat.model.MessageUi
+import com.example.aichathelp.ui.theme.MediumSeaGreen
 
 @Composable
 fun MessageItem(
@@ -104,9 +105,58 @@ fun MessageItem(
                 ),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            MessageContent(message)
-            if (message.type is MessageType.Error && onRetry != null) {
-                RetryButton(message, onRetry)
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                MessageContent(message)
+                if (message.type is MessageType.Error && onRetry != null) {
+                    RetryButton(message, onRetry)
+                }
+
+                if (!message.isUser && message.type is MessageType.Answer || !message.isUser && message.type is MessageType.Question) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_tokens),
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp),
+                                tint = MediumSeaGreen
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "${message.tokensSpent ?: 0}",
+                                fontSize = 12.sp,
+                                color = colorScheme.onSurface.copy(alpha = 0.7f)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(16.dp))
+
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_dollar_circle),
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                                tint = MediumSeaGreen
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "${message.costSpent ?: 0.0} $",
+                                fontSize = 12.sp,
+                                color = colorScheme.onSurface.copy(alpha = 0.7f)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(16.dp))
+
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "⚡ ${message.requestDuration ?: 0.0} s",
+                                fontSize = 12.sp,
+                                color = colorScheme.onSurface.copy(alpha = 0.7f)
+                            )
+                        }
+                    }
+                }
+
             }
         }
 

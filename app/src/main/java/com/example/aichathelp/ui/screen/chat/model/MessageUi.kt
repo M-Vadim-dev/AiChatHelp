@@ -12,18 +12,28 @@ data class MessageUi(
     val isUser: Boolean,
     val hasAnimated: Boolean = false,
     val isSending: Boolean = false,
+    val tokensSpent: Int? = null,
+    val costSpent: Double? = null,
+    val requestDuration: String? = null,
 ) {
     companion object {
         fun fromDomain(
             message: Message,
             isUser: Boolean = false,
             isSending: Boolean = false,
+            tokensSpent: Int? = null,
+            costSpent: Double? = null,
+            requestDuration: String? = null,
         ): MessageUi = MessageUi(
             text = message.text,
             time = message.time,
             type = message.type,
             isUser = isUser,
             isSending = isSending,
+            tokensSpent = tokensSpent,
+            costSpent = costSpent,
+            requestDuration = requestDuration,
         )
+
     }
 }

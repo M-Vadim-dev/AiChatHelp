@@ -3,15 +3,19 @@ package com.example.aichathelp.data.repository
 import com.example.aichathelp.data.mapper.ChatRequestMapper
 import com.example.aichathelp.data.mapper.JsonResponseMapper
 import com.example.aichathelp.data.remote.ChatApi
+import com.example.aichathelp.di.DeepSeekApiClient
+import com.example.aichathelp.di.PerplexityApiClient
 import com.example.aichathelp.domain.model.ChatConfig
 import com.example.aichathelp.domain.model.ChatContext
 import com.example.aichathelp.domain.model.ChatStep
+import com.example.aichathelp.domain.model.ModelVendor
 import com.example.aichathelp.domain.repository.ChatRepository
 import kotlinx.serialization.json.Json
 import javax.inject.Inject
 
 class ChatRepositoryImpl @Inject constructor(
-    private val api: ChatApi,
+    @param:PerplexityApiClient private val perplexityApi: ChatApi,
+    @param:DeepSeekApiClient private val deepSeekApi: ChatApi,
     private val requestMapper: ChatRequestMapper,
     private val responseMapper: JsonResponseMapper,
     private val json: Json,
@@ -23,16 +27,32 @@ class ChatRepositoryImpl @Inject constructor(
         config: ChatConfig,
         systemPrompt: String
     ): ChatStep {
+        val startTime = System.currentTimeMillis()
 
         val requestDto = requestMapper.toDto(userMessage, chatContext, config, systemPrompt)
 
+        val api = getApi(config.provider)
+
         val responseDto = api.chatCompletion(requestDto)
+
+        val durationMs = System.currentTimeMillis() - startTime
+        val durationSec = String.format("%.2f", durationMs / 1000.0)
 
         val rawJson = responseDto.choices.firstOrNull()?.message?.content ?: "{}"
 
-        val cleaned = responseMapper.cleanRawResponse(rawJson)
+        val cleanedJson = responseMapper.cleanRawResponse(rawJson)
 
-        return json.decodeFromString(ChatStep.serializer(), cleaned)
+        val chatStep = json.decodeFromString(ChatStep.serializer(), cleanedJson)
+
+        val tokensSpent = responseDto.usage.totalTokens.takeIf { it > 0 }
+        val costSpent = responseDto.usage.cost.totalCost.takeIf { it > 0 }
+
+        return chatStep.copy(tokensSpent = tokensSpent, costSpent = costSpent, requestDuration = durationSec)
+    }
+
+    private fun getApi(vendor: ModelVendor): ChatApi = when (vendor) {
+        ModelVendor.PERPLEXITY -> perplexityApi
+        ModelVendor.DEEPSEEK -> deepSeekApi
     }
 
 }

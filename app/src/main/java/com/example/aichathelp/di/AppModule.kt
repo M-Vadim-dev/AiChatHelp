@@ -19,7 +19,16 @@ import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
 import java.util.concurrent.TimeUnit
+import javax.inject.Qualifier
 import javax.inject.Singleton
+
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class PerplexityApiClient
+
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class DeepSeekApiClient
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -34,42 +43,37 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideOkHttpClient(): OkHttpClient {
-        val logging = HttpLoggingInterceptor().apply {
-            level =
-                if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BODY else HttpLoggingInterceptor.Level.NONE
-        }
-
-        val apiKeyInterceptor = Interceptor { chain ->
-            val original = chain.request()
-            val request = original.newBuilder()
-                .header("Authorization", "Bearer ${BuildConfig.API_KEY}")
-                .build()
-            chain.proceed(request)
-        }
-
-        return OkHttpClient.Builder()
-            .addInterceptor(logging)
-            .addInterceptor(apiKeyInterceptor)
-            .connectTimeout(30, TimeUnit.SECONDS)
-            .readTimeout(30, TimeUnit.SECONDS)
-            .build()
-    }
+    @PerplexityApiClient
+    fun providePerplexityClient(): OkHttpClient = createOkHttpClient(BuildConfig.PERPLEXITY_API_KEY)
 
     @Provides
     @Singleton
-    fun provideRetrofit(json: Json, client: OkHttpClient): Retrofit {
-        val contentType = "application/json".toMediaType()
-        return Retrofit.Builder()
-            .baseUrl("https://api.perplexity.ai/")
-            .addConverterFactory(json.asConverterFactory(contentType))
-            .client(client)
-            .build()
-    }
+    @DeepSeekApiClient
+    fun provideDeepSeekClient(): OkHttpClient = createOkHttpClient(BuildConfig.DEEPSEEK_API_KEY)
 
     @Provides
     @Singleton
-    fun provideChatApi(retrofit: Retrofit): ChatApi = retrofit.create(ChatApi::class.java)
+    @PerplexityApiClient
+    fun providePerplexityRetrofit(json: Json, @PerplexityApiClient client: OkHttpClient): Retrofit =
+        createRetrofit(json = json, baseUrl = "https://api.perplexity.ai/", client = client)
+
+    @Provides
+    @Singleton
+    @DeepSeekApiClient
+    fun provideDeepSeekRetrofit(json: Json, @DeepSeekApiClient client: OkHttpClient): Retrofit =
+        createRetrofit(json = json, baseUrl = "https://api.deepseek.com/", client = client)
+
+    @Provides
+    @Singleton
+    @PerplexityApiClient
+    fun providePerplexityChatApi(@PerplexityApiClient retrofit: Retrofit): ChatApi =
+        retrofit.create(ChatApi::class.java)
+
+    @Provides
+    @Singleton
+    @DeepSeekApiClient
+    fun provideDeepSeekChatApi(@DeepSeekApiClient retrofit: Retrofit): ChatApi =
+        retrofit.create(ChatApi::class.java)
 
     @Provides
     fun provideJsonResponseMapper(json: Json): JsonResponseMapper = JsonResponseMapper(json)
@@ -81,4 +85,37 @@ object AppModule {
     @Singleton
     fun providePromptRepository(): PromptRepository = PromptRepositoryImpl(ChatPrompts)
 
+}
+
+private fun createOkHttpClient(apiKey: String): OkHttpClient {
+    val logging = HttpLoggingInterceptor().apply {
+        level =
+            if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BODY
+            else HttpLoggingInterceptor.Level.NONE
+    }
+
+    val apiKeyInterceptor = Interceptor { chain ->
+        val req = chain.request()
+            .newBuilder()
+            .header("Authorization", "Bearer $apiKey")
+            .build()
+        chain.proceed(req)
+    }
+
+    return OkHttpClient.Builder()
+        .addInterceptor(logging)
+        .addInterceptor(apiKeyInterceptor)
+        .connectTimeout(30, TimeUnit.SECONDS)
+        .readTimeout(30, TimeUnit.SECONDS)
+        .build()
+}
+
+private fun createRetrofit(json: Json, baseUrl: String, client: OkHttpClient): Retrofit {
+    val contentType = "application/json".toMediaType()
+
+    return Retrofit.Builder()
+        .baseUrl(baseUrl)
+        .addConverterFactory(json.asConverterFactory(contentType))
+        .client(client)
+        .build()
 }

@@ -121,14 +121,14 @@ fun SettingsDialog(
                     Spacer(modifier = Modifier.height(16.dp))
 
                     Text(
-                        text = "Температура: ${"%.1f".format(temperature)}",
+                        text = "Температура (creativity): ${"%.1f".format(temperature)}",
                         modifier = Modifier.padding(start = 8.dp)
                     )
                     Slider(
                         value = temperature.toFloat(),
                         onValueChange = { onTemperatureChanged(it.toDouble()) },
-                        valueRange = 0.2f..1.0f,
-                        steps = 7,
+                        valueRange = 0.2f..1.4f,
+                        steps = 12,
                         colors = SliderDefaults.colors(
                             thumbColor = colorScheme.primary,
                             activeTickColor = colorScheme.onPrimary.copy(alpha = 0.2f),
@@ -141,7 +141,7 @@ fun SettingsDialog(
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Text(
-                        text = "Top P: ${"%.1f".format(topP)}",
+                        text = "Top P (diversity): ${"%.1f".format(topP)}",
                         modifier = Modifier.padding(start = 8.dp)
                     )
                     Slider(

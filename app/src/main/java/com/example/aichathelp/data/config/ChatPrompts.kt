@@ -14,6 +14,16 @@ object ChatPrompts {
                 "Пример без answer: {\"state\":\"collect\",\"question\":\"Уточняющий вопрос\"}\n" +
                 "Любые другие поля запрещены."
 
+    private const val JSON_FORMAT_MINI =
+        "СТРОГИЙ ФОРМАТ: возвращай JSON с двумя полями:\n" +
+                "- state: одно из значений 'select_topic', 'collect', 'result'\n" +
+                "- answer: краткий ответ на текущий шаг\\\n" +
+                "Пример: {\"state\":\"collect\",\"answer\":\"краткий ответ\"}. " +
+                "Любые другие поля запрещены. "
+
+    private const val FSM_RULES_MINI =
+        "Ты — тематический агент FSM. Отвечаешь только коротко. "
+
     private const val FSM_RULES =
         "Ты — тематический агент FSM. Отвечаешь только коротко. Используй контекст для принятия решений.:\n" +
                 "- state: 'select_topic' → задай вопрос о теме (только question)\n" +
@@ -34,7 +44,7 @@ object ChatPrompts {
                 "ПРИКОЛЫ НА КАЖДОМ ШАГУ: мемы, шутки, сарказм!\n" +
                 "НО JSON-РЕГУЛЫ СВЯЩЕННЫ! НЕ ЛОМАЙ FSM ИЛИ ПОЛНЫЙ ФЕЙЛ!\n"
 
-    private const val BASE_JSON_PROMPT = JSON_RULES + JSON_FORMAT + FSM_RULES
+    private const val BASE_JSON_PROMPT = JSON_RULES + JSON_FORMAT_MINI + FSM_RULES_MINI
     const val FSM_PROMPT = BASE_JSON_PROMPT + PROFESSIONAL_STYLE
     const val CREATIVE_PROMPT = BASE_JSON_PROMPT + COMEDIAN_STYLE
 

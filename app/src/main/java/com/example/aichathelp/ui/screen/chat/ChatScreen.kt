@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -54,6 +53,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.example.aichathelp.R
 import com.example.aichathelp.domain.model.MessageType
+import com.example.aichathelp.domain.model.ModelVendor
 import com.example.aichathelp.ui.screen.chat.model.MessageUi
 import com.example.aichathelp.ui.theme.AiChatHelpTheme
 import com.example.aichathelp.ui.theme.RoyalBlue
@@ -84,11 +84,13 @@ fun ChatScreen(
         messages = state.messages,
         loading = state.isLoading,
         input = state.input,
+        provider = state.provider,
         onInputChange = { viewModel.onIntent(ChatIntent.InputChanged(it)) },
         onSendClick = { viewModel.onIntent(ChatIntent.SendClicked) },
         onRetryClick = { viewModel.onIntent(ChatIntent.RetryClicked) },
         onClearChatClick = { viewModel.onIntent(ChatIntent.ClearChat) },
         onSettingsClick = { showSettingsDialog = true },
+        onProviderChange = { viewModel.onIntent(ChatIntent.ProviderChanged(it)) },
         listState = listState,
         modifier = modifier,
     )
@@ -113,11 +115,13 @@ private fun ChatScreenContent(
     messages: List<MessageUi>,
     loading: Boolean,
     input: String,
+    provider: ModelVendor,
     onInputChange: (String) -> Unit,
     onSendClick: () -> Unit,
     onRetryClick: (MessageUi) -> Unit,
     onClearChatClick: () -> Unit,
     onSettingsClick: () -> Unit,
+    onProviderChange: (ModelVendor) -> Unit,
     listState: LazyListState,
 ) {
     val hazeState = rememberHazeState(true)
@@ -171,17 +175,19 @@ private fun ChatScreenContent(
                         )
                     }
 
-                    item {
-                        Spacer(modifier = Modifier.fillParentMaxHeight())
-                    }
+//                    item {
+//                        Spacer(modifier = Modifier.fillParentMaxHeight())
+//                    }
                 }
             }
         }
 
         ChatHeader(
+            currentProvider = provider,
             onClearChat = onClearChatClick,
             onSettings = onSettingsClick,
             isChatEmpty = messages.isEmpty(),
+            onProviderSelected = onProviderChange,
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .windowInsetsPadding(WindowInsets.statusBars)
@@ -392,11 +398,13 @@ private fun ChatScreenContentPreview() {
             messages = mockMessages,
             loading = true,
             input = "",
+            provider = ModelVendor.PERPLEXITY,
             onInputChange = {},
             onSendClick = {},
             onRetryClick = {},
             onClearChatClick = {},
             onSettingsClick = {},
+            onProviderChange = {},
             listState = rememberLazyListState(),
         )
     }

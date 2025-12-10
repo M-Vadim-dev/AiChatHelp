@@ -1,5 +1,6 @@
 package com.example.aichathelp.ui.screen.chat
 
+import com.example.aichathelp.domain.model.ModelVendor
 import com.example.aichathelp.domain.model.PromptType
 
 sealed class ChatIntent {
@@ -12,4 +13,5 @@ sealed class ChatIntent {
     data class TemperatureChanged(val value: Double) : ChatIntent()
     data class TopPChanged(val value: Double) : ChatIntent()
     object ResetConfigClicked : ChatIntent()
+    data class ProviderChanged(val provider: ModelVendor) : ChatIntent()
 }
