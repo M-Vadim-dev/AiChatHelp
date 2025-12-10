@@ -29,6 +29,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme.colorScheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
@@ -52,12 +53,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.example.aichathelp.R
-import com.example.aichathelp.domain.model.MessageType
 import com.example.aichathelp.domain.model.ModelVendor
 import com.example.aichathelp.ui.screen.chat.model.MessageUi
 import com.example.aichathelp.ui.theme.AiChatHelpTheme
 import com.example.aichathelp.ui.theme.RoyalBlue
-import com.example.aichathelp.ui.theme.White
 import com.example.aichathelp.ui.util.toUiTime
 import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.HazeTint
@@ -126,99 +125,100 @@ private fun ChatScreenContent(
 ) {
     val hazeState = rememberHazeState(true)
 
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .imePadding(),
+    Scaffold(
+        topBar = {
+            Box(
+                modifier = Modifier.hazeEffect(
+                    hazeState,
+                    HazeStyle(
+                        blurRadius = 8.dp,
+                        backgroundColor = colorScheme.onPrimary,
+                        tint = HazeTint(colorScheme.onPrimary.copy(alpha = 0.9f))
+                    )
+                )
+            ) {
+                ChatHeader(
+                    currentProvider = provider,
+                    onClearChat = onClearChatClick,
+                    onSettings = onSettingsClick,
+                    isChatEmpty = messages.isEmpty(),
+                    onProviderSelected = onProviderChange,
+                    modifier = Modifier.windowInsetsPadding(WindowInsets.statusBars)
+                )
+            }
+        },
+        bottomBar = {
+            MessageInput(
+                input = input,
+                onInputChange = onInputChange,
+                onSendClick = onSendClick,
+                sendingDisabled = loading,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .hazeEffect(
+                        hazeState,
+                        HazeStyle(
+                            blurRadius = 8.dp,
+                            backgroundColor = colorScheme.onPrimary,
+                            tint = HazeTint(colorScheme.onPrimary.copy(alpha = 0.8f))
+                        )
+                    )
+                    .padding(start = 8.dp, end = 8.dp, top = 0.dp, bottom = 4.dp)
+            )
+        },
     ) {
         Box(
-            modifier = Modifier
+            modifier = modifier
                 .fillMaxSize()
-                .hazeSource(hazeState)
+                .imePadding(),
         ) {
-            if (messages.isEmpty()) {
-                Column(
-                    modifier = Modifier.align(Alignment.Center),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Icon(
-                        modifier = Modifier.size(64.dp),
-                        painter = painterResource(R.drawable.ic_ai_chat),
-                        contentDescription = null,
-                        tint = RoyalBlue
-                    )
-                    Text(
-                        text = stringResource(R.string.chat_title),
-                        fontSize = 22.sp
-                    )
-                }
-            } else {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 6.dp),
-                    state = listState,
-                    verticalArrangement = Arrangement.Bottom,
-                    contentPadding = PaddingValues(
-                        top = 100.dp,
-                        bottom = 100.dp
-                    ),
-                    reverseLayout = true
-                ) {
-                    if (loading) item { IndicatorBubble(visible = loading) }
-
-                    items(items = messages.reversed(), key = { it.id }) { message ->
-                        MessageItem(
-                            message = message,
-                            onRetry = onRetryClick,
-                            isNew = message.id == messages.lastOrNull()?.id,
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .hazeSource(hazeState)
+            ) {
+                if (messages.isEmpty()) {
+                    Column(
+                        modifier = Modifier.align(Alignment.Center),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            modifier = Modifier.size(64.dp),
+                            painter = painterResource(R.drawable.ic_ai_chat),
+                            contentDescription = null,
+                            tint = RoyalBlue
+                        )
+                        Text(
+                            text = stringResource(R.string.chat_title),
+                            fontSize = 22.sp
                         )
                     }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 6.dp),
+                        state = listState,
+                        verticalArrangement = Arrangement.Bottom,
+                        contentPadding = PaddingValues(
+                            top = 100.dp,
+                            bottom = 100.dp
+                        ),
+                        reverseLayout = true
+                    ) {
+                        if (loading) item { IndicatorBubble(visible = loading) }
 
-//                    item {
-//                        Spacer(modifier = Modifier.fillParentMaxHeight())
-//                    }
+                        items(items = messages.reversed(), key = { it.id }) { message ->
+                            MessageItem(
+                                message = message,
+                                onRetry = onRetryClick,
+                                isNew = message.id == messages.lastOrNull()?.id,
+                            )
+                        }
+                    }
                 }
             }
         }
-
-        ChatHeader(
-            currentProvider = provider,
-            onClearChat = onClearChatClick,
-            onSettings = onSettingsClick,
-            isChatEmpty = messages.isEmpty(),
-            onProviderSelected = onProviderChange,
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .windowInsetsPadding(WindowInsets.statusBars)
-                .hazeEffect(
-                    hazeState,
-                    HazeStyle(
-                        blurRadius = 4.dp,
-                        backgroundColor = White,
-                        tint = HazeTint(White.copy(alpha = 0.9f))
-                    )
-                ),
-        )
-
-        MessageInput(
-            input = input,
-            onInputChange = onInputChange,
-            onSendClick = onSendClick,
-            sendingDisabled = loading,
-            modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.BottomCenter)
-                .hazeEffect(
-                    hazeState,
-                    HazeStyle(
-                        blurRadius = 4.dp,
-                        backgroundColor = White,
-                        tint = HazeTint(White.copy(alpha = 0.8f))
-                    )
-                )
-                .padding(start = 8.dp, end = 8.dp, top = 0.dp, bottom = 4.dp)
-        )
     }
 }
 
@@ -351,45 +351,54 @@ private fun IndicatorBubble(visible: Boolean) {
 private fun ChatScreenContentPreview() {
     val mockMessages = listOf(
         MessageUi(
+            id = "1",
             text = "Привет! Чем могу помочь?",
             isUser = false,
             isSending = true,
             time = LocalDateTime.now().minusMinutes(5).toUiTime(),
-            type = MessageType.Answer
         ),
         MessageUi(
+            id = "2",
             text = "Объясни, как работает ViewModel.",
             isUser = true,
             isSending = true,
             time = LocalDateTime.now().minusMinutes(4).toUiTime(),
-            type = MessageType.Answer
         ),
         MessageUi(
+            id = "3",
             text = "ViewModel хранит состояние UI и переживает пересоздание экранов.",
             isUser = false,
             isSending = true,
             time = LocalDateTime.now().minusMinutes(3).toUiTime(),
-            type = MessageType.Answer
+            isTokenLimitExceeded = true,
         ),
         MessageUi(
+            id = "4",
             text = "Хочешь пример с LiveData или StateFlow?",
             isUser = false,
             isSending = true,
             time = LocalDateTime.now().minusMinutes(2).toUiTime(),
-            type = MessageType.Question
         ),
         MessageUi(
+            id = "5",
             text = "StateFlow",
             isUser = true,
             isSending = true,
             time = LocalDateTime.now().minusMinutes(1).toUiTime(),
-            type = MessageType.Answer
         ),
         MessageUi(
+            id = "6",
             text = "Ошибка",
             isUser = false,
             time = LocalDateTime.now().minusMinutes(1).toUiTime(),
-            type = MessageType.Error("")
+            error = "Something went wrong"
+        ),
+        MessageUi(
+            id = "7",
+            text = "StateFlowStateFloFlowStateFlowteFlowStateFlowStateFlowStateFlowStateFlowStateFlowStateFlowStateFlowStateFlowStateFlowStateFlowStateFlowStateFlowStateFlow",
+            isUser = true,
+            isSending = true,
+            time = LocalDateTime.now().minusMinutes(1).toUiTime(),
         ),
     )
 

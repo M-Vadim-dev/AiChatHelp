@@ -90,6 +90,9 @@ dependencies {
     implementation(libs.hilt.compose)
     ksp(libs.hilt.compiler)
 
+    implementation(libs.androidx.room.runtime)
+    ksp(libs.androidx.room.compiler)
+
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.bundles.okhttp)
     implementation(libs.bundles.retrofit)

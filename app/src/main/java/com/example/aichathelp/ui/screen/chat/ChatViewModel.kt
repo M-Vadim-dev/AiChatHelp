@@ -3,36 +3,48 @@ package com.example.aichathelp.ui.screen.chat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.aichathelp.domain.model.ChatConfig
-import com.example.aichathelp.domain.model.ChatContext
-import com.example.aichathelp.domain.model.ChatStep
-import com.example.aichathelp.domain.model.Message
-import com.example.aichathelp.domain.model.MessageType
 import com.example.aichathelp.domain.model.ModelVendor
 import com.example.aichathelp.domain.model.PromptType
 import com.example.aichathelp.domain.repository.PromptRepository
+import com.example.aichathelp.domain.usecase.ClearChatHistoryUseCase
+import com.example.aichathelp.domain.usecase.GetChatHistoryUseCase
 import com.example.aichathelp.domain.usecase.SendQuestionUseCase
-import com.example.aichathelp.ui.screen.chat.model.MessageUi
-import com.example.aichathelp.ui.util.toUiTime
+import com.example.aichathelp.ui.mapper.ChatMessageUiMapper
+import com.example.aichathelp.ui.screen.chat.mapper.MessageUiMapper
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.time.LocalDateTime
 import javax.inject.Inject
 
 @HiltViewModel
 class ChatViewModel @Inject constructor(
     private val sendQuestionUseCase: SendQuestionUseCase,
+    private val getChatHistoryUseCase: GetChatHistoryUseCase,
+    private val clearChatHistoryUseCase: ClearChatHistoryUseCase,
     private val promptRepository: PromptRepository,
+    private val chatMessageUiMapper: ChatMessageUiMapper,
+    private val messageUiMapper: MessageUiMapper,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(ChatState())
     val state: StateFlow<ChatState> = _state
 
-    private var chatContext = ChatContext()
-
     init {
-        appendBotWelcomeMessage()
+        loadChatHistory()
+    }
+
+    private fun loadChatHistory() {
+        viewModelScope.launch {
+            val history = getChatHistoryUseCase()
+            _state.update {
+                it.copy(messages = chatMessageUiMapper.toUi(history))
+            }
+            if (history.isEmpty()) {
+                _state.update { it.copy(messages = it.messages + messageUiMapper.createWelcomeMessage()) }
+            }
+        }
     }
 
     fun onIntent(intent: ChatIntent) {
@@ -47,139 +59,123 @@ class ChatViewModel @Inject constructor(
             is ChatIntent.TopPChanged -> updateTopP(intent.value)
             ChatIntent.ResetConfigClicked -> resetConfig()
             is ChatIntent.ProviderChanged -> updateProvider(intent.provider)
+            is ChatIntent.UseHistoryChanged -> updateUseHistory(intent.value)
         }
     }
 
     private fun updatePromptType(type: PromptType) {
-        _state.value = _state.value.copy(currentPromptType = type)
+        _state.update { it.copy(currentPromptType = type) }
     }
 
     private fun updateProvider(provider: ModelVendor) {
-        _state.value = _state.value.copy(provider = provider)
-
-        chatContext = ChatContext()
-        _state.value = _state.value.copy(messages = emptyList())
-        appendBotWelcomeMessage()
+        _state.update { it.copy(provider = provider) }
+        clearChatHistory()
     }
 
     private fun clearChatHistory() {
-        chatContext = ChatContext()
-        _state.value = _state.value.copy(
-            messages = emptyList(),
-            input = "",
-            error = null,
-            isLoading = false
-        )
-
-        appendBotWelcomeMessage()
+        viewModelScope.launch {
+            clearChatHistoryUseCase()
+            _state.update {
+                it.copy(
+                    messages = listOf(messageUiMapper.createWelcomeMessage()),
+                    input = "",
+                    error = null,
+                    isLoading = false
+                )
+            }
+        }
     }
 
     private fun resetConfig() {
         val defaultConfig = ChatConfig.default()
-        _state.value = _state.value.copy(
-            currentPromptType = ChatState().currentPromptType,
-            temperature = defaultConfig.temperature,
-            topP = defaultConfig.topP,
-        )
+        _state.update {
+            it.copy(
+                currentPromptType = ChatState().currentPromptType,
+                temperature = defaultConfig.temperature,
+                topP = defaultConfig.topP,
+            )
+        }
     }
 
-    private fun appendBotWelcomeMessage() {
-        val message = Message(
-            text = "Привет! Чем могу помочь?",
-            time = LocalDateTime.now().toUiTime(),
-            type = MessageType.Answer
-        )
-
-        val messageUi = MessageUi.fromDomain(message = message, isUser = false)
-        _state.value = _state.value.copy(messages = _state.value.messages + messageUi)
+    private fun updateUseHistory(value: Boolean) {
+        _state.update { it.copy(useHistory = value) }
     }
 
     private fun updateInput(text: String) {
-        _state.value = _state.value.copy(input = text)
+        _state.update { it.copy(input = text) }
     }
 
     private fun updateTemperature(value: Double) {
-        _state.value = _state.value.copy(temperature = value)
+        _state.update { it.copy(temperature = value) }
     }
 
     private fun updateTopP(value: Double) {
-        _state.value = _state.value.copy(topP = value)
+        _state.update { it.copy(topP = value) }
     }
 
     private fun sendQuestion() {
-        val text = _state.value.input
+        val text = _state.value.input.trim()
         if (text.isBlank()) return
 
-        appendUserMessage(text)
-
-        _state.value = _state.value.copy(isLoading = true, error = null)
+        val userMessage = messageUiMapper.createUserMessage(text)
+        _state.update {
+            it.copy(
+                messages = it.messages + userMessage,
+                input = "",
+                isLoading = true,
+                error = null
+            )
+        }
 
         val config = ChatConfig(
             provider = _state.value.provider,
             model = _state.value.provider.defaultModel,
             temperature = _state.value.temperature,
-            topP = _state.value.topP
+            topP = _state.value.topP,
+            useHistory = _state.value.useHistory,
         )
 
         val promptText = getPrompt(_state.value.currentPromptType)
 
         viewModelScope.launch {
-            try {
-                val result = sendQuestionUseCase(
-                    userMessage = text,
-                    chatContext = chatContext,
-                    systemPrompt = promptText,
-                    config = config
-                )
+            val result = sendQuestionUseCase(
+                userMessage = text,
+                systemPrompt = promptText,
+                config = config
+            )
 
-                result.onSuccess { response ->
-                    val currentMessages = _state.value.messages.map { msg ->
-                        if (msg.isUser && msg.isSending) {
-                            msg.copy(
-                                isSending = false,
-                                tokensSpent = response.tokensSpent,
-                                costSpent = response.costSpent,
-                                requestDuration = response.requestDuration,
-                            )
-                        } else msg
+            result.onSuccess { response ->
+                val botMessage = messageUiMapper.createBotMessage(response)
+
+                _state.update { currentState ->
+                    val updatedMessages = currentState.messages.map { msg ->
+                        if (msg.id == userMessage.id) msg.copy(isSending = false) else msg
                     }
-
-                    val answerUi = MessageUi.fromDomain(
-                        Message(
-                            text = response.answer,
-                            time = LocalDateTime.now().toUiTime(),
-                            type = MessageType.Answer
-                        ),
-                        isUser = false,
-                        tokensSpent = response.tokensSpent,
-                        costSpent = response.costSpent,
-                        requestDuration = response.requestDuration,
+                    currentState.copy(
+                        messages = updatedMessages + botMessage,
+                        isLoading = false
                     )
-
-                    _state.value = _state.value.copy(messages = currentMessages + answerUi)
-
                 }
-                    .onFailure { error ->
-                        appendMessages(
-                            listOf(
-                                buildErrorMessage(error.message ?: "Unknown error")
-                            )
-                        )
-                    }
-            } finally {
-                _state.value = _state.value.copy(isLoading = false)
+            }.onFailure { error ->
+                val errorMessage = messageUiMapper.createErrorMessage(error)
+                _state.update {
+                    it.copy(
+                        messages = it.messages + errorMessage,
+                        isLoading = false
+                    )
+                }
             }
         }
     }
 
     private fun clearError() {
-        _state.value = _state.value.copy(error = null)
+        _state.update { it.copy(error = null) }
     }
 
     private fun retryLastQuestion() {
         val lastUserMessage = _state.value.messages.lastOrNull { it.isUser }?.text
         lastUserMessage?.let {
-            _state.value = _state.value.copy(input = it)
+            _state.update { state -> state.copy(input = it) }
             sendQuestion()
         }
     }
@@ -188,74 +184,4 @@ class ChatViewModel @Inject constructor(
         PromptType.PROFESSIONAL -> promptRepository.getFsmPrompt()
         PromptType.CREATIVE -> promptRepository.getCreativePrompt()
     }
-
-    private fun appendUserMessage(text: String) {
-        val message = Message(
-            text = text,
-            time = LocalDateTime.now().toUiTime(),
-            type = MessageType.Answer
-        )
-        val messageUi = MessageUi.fromDomain(
-            message,
-            isUser = true,
-            isSending = true
-        ).copy(hasAnimated = false)
-
-        _state.value = _state.value.copy(
-            messages = _state.value.messages + messageUi,
-            input = ""
-        )
-    }
-
-    private fun appendChatStep(step: ChatStep) {
-        val currentMessages = _state.value.messages
-
-        val updatedMessages = currentMessages.map { msg ->
-            if (msg.isUser && msg.isSending) {
-                msg.copy(
-                    isSending = false,
-                    hasAnimated = false,
-                    tokensSpent = step.tokensSpent,
-                    costSpent = step.costSpent
-                )
-            } else msg
-        }
-
-        val time = LocalDateTime.now().toUiTime()
-        val newMessages = mutableListOf<MessageUi>()
-
-        step.answer.takeIf { it.isNotBlank() }?.let {
-            newMessages += MessageUi.fromDomain(
-                Message(text = it, time = time, type = MessageType.Answer),
-                isUser = false,
-                tokensSpent = step.tokensSpent,
-                costSpent = step.costSpent
-            ).copy(hasAnimated = false)
-        }
-
-        step.question.takeIf { it.isNotBlank() }?.let {
-            newMessages += MessageUi.fromDomain(
-                Message(text = it, time = time, type = MessageType.Question),
-                isUser = false
-            ).copy(hasAnimated = false)
-        }
-
-        _state.value = _state.value.copy(messages = updatedMessages + newMessages)
-    }
-
-    private fun appendMessages(messages: List<MessageUi>) {
-        _state.value = _state.value.copy(
-            messages = _state.value.messages + messages
-        )
-    }
-
-    private fun buildErrorMessage(message: String): MessageUi {
-        val msg = Message(
-            text = message,
-            time = LocalDateTime.now().toUiTime(),
-            type = MessageType.Error(message)
-        )
-        return MessageUi.fromDomain(message = msg, isUser = false)
-    }
-
 }

@@ -8,7 +8,7 @@ object ChatPrompts {
     private const val JSON_FORMAT =
         "СТРОГИЙ ФОРМАТ: возвращай JSON с тремя полями:\n" +
                 "- state: одно из значений 'select_topic', 'collect', 'result'\n" +
-                "- answer: краткий или развернутый ответ на текущий шаг (ВАЖНО: ОБЯЗАТЕЛЬНО делай это поле пустым, если question не пустой)\\\n" +
+                "- answer: развернутый ответ на текущий шаг (ВАЖНО: ОБЯЗАТЕЛЬНО делай это поле пустым, если question не пустой)\\\n" +
                 "- question: ОДИН короткий уточняющий вопрос, иначе пустая строка\n" +
                 "Пример: {\"state\":\"collect\",\"answer\":\"Полный итог\",\"question\":\"Уточняющий вопрос\"}. " +
                 "Пример без answer: {\"state\":\"collect\",\"question\":\"Уточняющий вопрос\"}\n" +
@@ -17,8 +17,8 @@ object ChatPrompts {
     private const val JSON_FORMAT_MINI =
         "СТРОГИЙ ФОРМАТ: возвращай JSON с двумя полями:\n" +
                 "- state: одно из значений 'select_topic', 'collect', 'result'\n" +
-                "- answer: краткий ответ на текущий шаг\\\n" +
-                "Пример: {\"state\":\"collect\",\"answer\":\"краткий ответ\"}. " +
+                "- answer: развернутый ответ на текущий шаг\\\n" +
+                "Пример: {\"state\":\"collect\",\"answer\":\"развернутый ответ\"}. " +
                 "Любые другие поля запрещены. "
 
     private const val FSM_RULES_MINI =

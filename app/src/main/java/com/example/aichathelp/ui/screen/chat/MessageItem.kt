@@ -6,6 +6,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,6 +21,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme.colorScheme
@@ -33,14 +36,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.aichathelp.R
-import com.example.aichathelp.domain.model.MessageType
 import com.example.aichathelp.ui.screen.chat.model.MessageUi
 import com.example.aichathelp.ui.theme.MediumSeaGreen
 
@@ -50,6 +54,9 @@ fun MessageItem(
     isNew: Boolean = false,
     onRetry: ((MessageUi) -> Unit)? = null,
 ) {
+    var showTokenMenu by remember { mutableStateOf(false) }
+    var showCostMenu by remember { mutableStateOf(false) }
+    var showTokenLimitMenu by remember { mutableStateOf(false) }
     var hasAnimated by remember(message.id) { mutableStateOf(false) }
 
     LaunchedEffect(message.id) {
@@ -105,55 +112,127 @@ fun MessageItem(
                 ),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 MessageContent(message)
-                if (message.type is MessageType.Error && onRetry != null) {
+
+                if (message.error != null && onRetry != null) {
                     RetryButton(message, onRetry)
                 }
 
-                if (!message.isUser && message.type is MessageType.Answer || !message.isUser && message.type is MessageType.Question) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                if (!message.isUser && message.error == null) {
+                    Column(
+                        horizontalAlignment = Alignment.Start,
+                        modifier = Modifier.padding(4.dp)
+                    ) {
+                        Box {
                             Icon(
                                 painter = painterResource(id = R.drawable.ic_tokens),
                                 contentDescription = null,
-                                modifier = Modifier.size(20.dp),
+                                modifier = Modifier
+                                    .clip(CircleShape)
+                                    .size(20.dp)
+                                    .clickable { showTokenMenu = true },
                                 tint = MediumSeaGreen
                             )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = "${message.tokensSpent ?: 0}",
-                                fontSize = 12.sp,
-                                color = colorScheme.onSurface.copy(alpha = 0.7f)
-                            )
+
+                            DropdownMenu(
+                                expanded = showTokenMenu,
+                                onDismissRequest = { showTokenMenu = false }
+                            ) {
+                                InfoDropdownItem(
+                                    iconRes = R.drawable.ic_tokens,
+                                    label = "Prompt Tokens:",
+                                    value = "${message.promptTokens}",
+                                    onClick = { showTokenMenu = false }
+                                )
+                                InfoDropdownItem(
+                                    iconRes = R.drawable.ic_tokens,
+                                    label = "Completion Tokens:",
+                                    value = "${message.completionTokens}",
+                                    isError = message.isTokenLimitExceeded,
+                                    onClick = { showTokenMenu = false }
+                                )
+                                InfoDropdownItem(
+                                    iconRes = R.drawable.ic_tokens,
+                                    label = "Total Tokens:",
+                                    value = "${message.totalTokens}",
+                                    onClick = { showTokenMenu = false }
+                                )
+                            }
                         }
 
-                        Spacer(modifier = Modifier.width(16.dp))
+                        Spacer(modifier = Modifier.height(6.dp))
 
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box {
                             Icon(
                                 painter = painterResource(id = R.drawable.ic_dollar_circle),
                                 contentDescription = null,
-                                modifier = Modifier.size(16.dp),
+                                modifier = Modifier
+                                    .clip(CircleShape)
+                                    .size(16.dp)
+                                    .clickable { showCostMenu = true },
                                 tint = MediumSeaGreen
                             )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = "${message.costSpent ?: 0.0} $",
-                                fontSize = 12.sp,
-                                color = colorScheme.onSurface.copy(alpha = 0.7f)
-                            )
+
+                            DropdownMenu(
+                                expanded = showCostMenu,
+                                onDismissRequest = { showCostMenu = false }
+                            ) {
+                                InfoDropdownItem(
+                                    iconRes = R.drawable.ic_dollar_circle,
+                                    label = "Input Tokens Cost:",
+                                    value = "${message.inputTokensCost}",
+                                    onClick = { showCostMenu = false }
+                                )
+                                InfoDropdownItem(
+                                    iconRes = R.drawable.ic_dollar_circle,
+                                    label = "Output Tokens Cost:",
+                                    value = "${message.outputTokensCost}",
+                                    onClick = { showCostMenu = false }
+                                )
+                                InfoDropdownItem(
+                                    iconRes = R.drawable.ic_dollar_circle,
+                                    label = "Request Cost:",
+                                    value = "${message.requestCost}",
+                                    onClick = { showCostMenu = false }
+                                )
+                                InfoDropdownItem(
+                                    iconRes = R.drawable.ic_dollar_circle,
+                                    label = "Total Cost:",
+                                    value = "${message.totalCost}",
+                                    onClick = { showCostMenu = false }
+                                )
+                            }
                         }
 
-                        Spacer(modifier = Modifier.width(16.dp))
+                        if (message.isTokenLimitExceeded) {
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Box {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_warning),
+                                    contentDescription = null,
+                                    modifier = Modifier
+                                        .clip(CircleShape)
+                                        .size(16.dp)
+                                        .clickable { showTokenLimitMenu = true },
+                                    tint = colorScheme.error
+                                )
 
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = "⚡ ${message.requestDuration ?: 0.0} s",
-                                fontSize = 12.sp,
-                                color = colorScheme.onSurface.copy(alpha = 0.7f)
-                            )
+                                DropdownMenu(
+                                    expanded = showTokenLimitMenu,
+                                    onDismissRequest = { showTokenLimitMenu = false }
+                                ) {
+                                    InfoDropdownItem(
+                                        iconRes = R.drawable.ic_warning,
+                                        label = stringResource(R.string.token_limit_exceeded),
+                                        value = "",
+                                        isError = message.isTokenLimitExceeded,
+                                        onClick = { showTokenLimitMenu = false }
+                                    )
+                                }
+                            }
                         }
+
                     }
                 }
 
@@ -175,11 +254,7 @@ private fun MessageContent(message: MessageUi) {
             .padding(horizontal = 12.dp, vertical = 8.dp)
             .widthIn(max = 275.dp)
     ) {
-        when (message.type) {
-            is MessageType.Answer,
-            is MessageType.Question,
-            is MessageType.Error -> MessageText(message)
-        }
+        MessageText(message)
     }
 }
 
@@ -190,16 +265,15 @@ else
 
 @Composable
 private fun getBackgroundColor(message: MessageUi): Color = when {
+    message.error != null -> colorScheme.errorContainer
     message.isUser -> colorScheme.surface.copy(alpha = 0.8f)
-    message.type is MessageType.Error -> colorScheme.errorContainer
-    message.type is MessageType.Question -> colorScheme.primaryContainer
     else -> colorScheme.primaryContainer
 }
 
 @Composable
 private fun getTextColor(message: MessageUi): Color = when {
+    message.error != null -> colorScheme.error
     message.isUser -> colorScheme.onSurface
-    message.type is MessageType.Error -> colorScheme.error
     else -> colorScheme.onPrimaryContainer
 }
 
@@ -258,4 +332,35 @@ private fun RetryButton(message: MessageUi, onRetry: (MessageUi) -> Unit) {
             tint = colorScheme.error
         )
     }
+}
+
+@Composable
+private fun InfoDropdownItem(
+    iconRes: Int,
+    label: String,
+    value: String,
+    isError: Boolean = false,
+    onClick: () -> Unit,
+) {
+    DropdownMenuItem(
+        onClick = onClick,
+        text = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Icon(
+                    painter = painterResource(id = iconRes),
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = if (isError) colorScheme.error else MediumSeaGreen
+                )
+                Text(text = label)
+                Text(
+                    text = value,
+                    color = if (isError) colorScheme.error else colorScheme.primary
+                )
+            }
+        }
+    )
 }

@@ -79,7 +79,7 @@ object AppModule {
     fun provideJsonResponseMapper(json: Json): JsonResponseMapper = JsonResponseMapper(json)
 
     @Provides
-    fun provideRequestMapper(json: Json): ChatRequestMapper = ChatRequestMapper(json)
+    fun provideRequestMapper(): ChatRequestMapper = ChatRequestMapper()
 
     @Provides
     @Singleton

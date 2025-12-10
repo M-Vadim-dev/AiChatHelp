@@ -14,4 +14,5 @@ data class ChatState(
     val currentPromptType: PromptType = PromptType.PROFESSIONAL,
     val temperature: Double = ChatConfig.creative().temperature,
     val topP: Double = ChatConfig.creative().topP,
+    val useHistory: Boolean = true,
 )

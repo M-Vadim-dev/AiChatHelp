@@ -14,4 +14,5 @@ sealed class ChatIntent {
     data class TopPChanged(val value: Double) : ChatIntent()
     object ResetConfigClicked : ChatIntent()
     data class ProviderChanged(val provider: ModelVendor) : ChatIntent()
+    data class UseHistoryChanged(val value: Boolean) : ChatIntent()
 }

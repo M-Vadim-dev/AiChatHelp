@@ -3,4 +3,5 @@
     <string name="app_name">AiChatHelp</string>
     <string name="message_placeholder">Сообщение...</string>
     <string name="chat_title">AI ChatHelp</string>
+    <string name="token_limit_exceeded">Превышен лимит токенов.\\nОтвет может быть обрезан.</string>
 </resources>
