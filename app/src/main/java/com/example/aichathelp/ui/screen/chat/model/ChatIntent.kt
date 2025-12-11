@@ -1,4 +1,4 @@
-package com.example.aichathelp.ui.screen.chat
+package com.example.aichathelp.ui.screen.chat.model
 
 import com.example.aichathelp.domain.model.ModelVendor
 import com.example.aichathelp.domain.model.PromptType
@@ -15,4 +15,5 @@ sealed class ChatIntent {
     object ResetConfigClicked : ChatIntent()
     data class ProviderChanged(val provider: ModelVendor) : ChatIntent()
     data class UseHistoryChanged(val value: Boolean) : ChatIntent()
+    data class MaxTokensChanged(val value: Int) : ChatIntent()
 }

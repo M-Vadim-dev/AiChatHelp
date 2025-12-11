@@ -1,4 +1,4 @@
-package com.example.aichathelp.ui.screen.chat
+package com.example.aichathelp.ui.screen.chat.components
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -46,6 +46,7 @@ fun ChatHeader(
     isChatEmpty: Boolean,
     onSettings: () -> Unit,
     onProviderSelected: (ModelVendor) -> Unit,
+    onToggleTokenPanel: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -82,6 +83,15 @@ fun ChatHeader(
         IconButton(onClick = onClearChat, enabled = !isChatEmpty) {
             Icon(
                 painter = painterResource(R.drawable.ic_trash_outline),
+                contentDescription = null,
+                tint = if (isChatEmpty) colorScheme.surfaceVariant else colorScheme.onBackground,
+                modifier = Modifier.size(28.dp)
+            )
+        }
+
+        IconButton(onClick = onToggleTokenPanel, enabled = !isChatEmpty) {
+            Icon(
+                painter = painterResource(R.drawable.ic_tokens_outline),
                 contentDescription = null,
                 tint = if (isChatEmpty) colorScheme.surfaceVariant else colorScheme.onBackground,
                 modifier = Modifier.size(28.dp)

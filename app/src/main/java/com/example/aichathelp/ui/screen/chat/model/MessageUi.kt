@@ -1,5 +1,8 @@
 package com.example.aichathelp.ui.screen.chat.model
 
+import androidx.compose.runtime.Immutable
+
+@Immutable
 data class MessageUi(
     val id: String,
     val text: String,

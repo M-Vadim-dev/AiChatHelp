@@ -1,16 +1,20 @@
-package com.example.aichathelp.ui.screen.chat
+package com.example.aichathelp.ui.screen.chat.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.aichathelp.domain.model.ChatConfig
 import com.example.aichathelp.domain.model.ModelVendor
 import com.example.aichathelp.domain.model.PromptType
-import com.example.aichathelp.domain.repository.PromptRepository
 import com.example.aichathelp.domain.usecase.ClearChatHistoryUseCase
 import com.example.aichathelp.domain.usecase.GetChatHistoryUseCase
+import com.example.aichathelp.domain.usecase.GetDefaultChatConfigUseCase
+import com.example.aichathelp.domain.usecase.GetPromptUseCase
 import com.example.aichathelp.domain.usecase.SendQuestionUseCase
 import com.example.aichathelp.ui.mapper.ChatMessageUiMapper
-import com.example.aichathelp.ui.screen.chat.mapper.MessageUiMapper
+import com.example.aichathelp.ui.screen.chat.model.ChatIntent
+import com.example.aichathelp.ui.screen.chat.model.ChatSettingsUiState
+import com.example.aichathelp.ui.screen.chat.model.ChatState
+import com.example.aichathelp.ui.screen.chat.mapper.MessageUiFactory
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -23,28 +27,19 @@ class ChatViewModel @Inject constructor(
     private val sendQuestionUseCase: SendQuestionUseCase,
     private val getChatHistoryUseCase: GetChatHistoryUseCase,
     private val clearChatHistoryUseCase: ClearChatHistoryUseCase,
-    private val promptRepository: PromptRepository,
+    private val getPromptUseCase: GetPromptUseCase,
     private val chatMessageUiMapper: ChatMessageUiMapper,
-    private val messageUiMapper: MessageUiMapper,
+    private val messageUiFactory: MessageUiFactory,
+    private val getDefaultChatConfigUseCase: GetDefaultChatConfigUseCase,
 ) : ViewModel() {
 
-    private val _state = MutableStateFlow(ChatState())
+    private val _state = MutableStateFlow(
+        ChatState(settings = createUiSettings(getDefaultChatConfigUseCase()))
+    )
     val state: StateFlow<ChatState> = _state
 
     init {
         loadChatHistory()
-    }
-
-    private fun loadChatHistory() {
-        viewModelScope.launch {
-            val history = getChatHistoryUseCase()
-            _state.update {
-                it.copy(messages = chatMessageUiMapper.toUi(history))
-            }
-            if (history.isEmpty()) {
-                _state.update { it.copy(messages = it.messages + messageUiMapper.createWelcomeMessage()) }
-            }
-        }
     }
 
     fun onIntent(intent: ChatIntent) {
@@ -59,17 +54,44 @@ class ChatViewModel @Inject constructor(
             is ChatIntent.TopPChanged -> updateTopP(intent.value)
             ChatIntent.ResetConfigClicked -> resetConfig()
             is ChatIntent.ProviderChanged -> updateProvider(intent.provider)
+            is ChatIntent.MaxTokensChanged -> updateMaxTokens(intent.value)
             is ChatIntent.UseHistoryChanged -> updateUseHistory(intent.value)
         }
     }
 
+    private fun createUiSettings(config: ChatConfig): ChatSettingsUiState =
+        ChatSettingsUiState(
+            provider = config.provider,
+            availableProviders = ModelVendor.entries,
+            currentPromptType = PromptType.PROFESSIONAL,
+            temperature = config.temperature,
+            topP = config.topP,
+            maxTokens = config.maxTokens,
+            useHistory = config.useHistory
+        )
+
+    private fun loadChatHistory() {
+        viewModelScope.launch {
+            val history = getChatHistoryUseCase()
+            _state.update {
+                it.copy(messages = chatMessageUiMapper.toUi(history))
+            }
+            if (history.isEmpty()) {
+                _state.update { it.copy(messages = it.messages + messageUiFactory.createWelcomeMessage()) }
+            }
+        }
+    }
+
     private fun updatePromptType(type: PromptType) {
-        _state.update { it.copy(currentPromptType = type) }
+        _state.update { it.copy(settings = it.settings.copy(currentPromptType = type)) }
     }
 
     private fun updateProvider(provider: ModelVendor) {
-        _state.update { it.copy(provider = provider) }
-        clearChatHistory()
+        viewModelScope.launch {
+            _state.update { it.copy(settings = it.settings.copy(provider = provider)) }
+            clearChatHistoryUseCase()
+            _state.update { it.copy(messages = listOf(messageUiFactory.createWelcomeMessage()), input = "", error = null, isLoading = false) }
+        }
     }
 
     private fun clearChatHistory() {
@@ -77,7 +99,7 @@ class ChatViewModel @Inject constructor(
             clearChatHistoryUseCase()
             _state.update {
                 it.copy(
-                    messages = listOf(messageUiMapper.createWelcomeMessage()),
+                    messages = listOf(messageUiFactory.createWelcomeMessage()),
                     input = "",
                     error = null,
                     isLoading = false
@@ -87,18 +109,7 @@ class ChatViewModel @Inject constructor(
     }
 
     private fun resetConfig() {
-        val defaultConfig = ChatConfig.default()
-        _state.update {
-            it.copy(
-                currentPromptType = ChatState().currentPromptType,
-                temperature = defaultConfig.temperature,
-                topP = defaultConfig.topP,
-            )
-        }
-    }
-
-    private fun updateUseHistory(value: Boolean) {
-        _state.update { it.copy(useHistory = value) }
+        _state.update { it.copy(settings = createUiSettings(getDefaultChatConfigUseCase())) }
     }
 
     private fun updateInput(text: String) {
@@ -106,18 +117,26 @@ class ChatViewModel @Inject constructor(
     }
 
     private fun updateTemperature(value: Double) {
-        _state.update { it.copy(temperature = value) }
+        _state.update { it.copy(settings = it.settings.copy(temperature = value)) }
     }
 
     private fun updateTopP(value: Double) {
-        _state.update { it.copy(topP = value) }
+        _state.update { it.copy(settings = it.settings.copy(topP = value)) }
+    }
+
+    private fun updateMaxTokens(value: Int) {
+        _state.update { it.copy(settings = it.settings.copy(maxTokens = value)) }
+    }
+
+    private fun updateUseHistory(value: Boolean) {
+        _state.update { it.copy(settings = it.settings.copy(useHistory = value)) }
     }
 
     private fun sendQuestion() {
         val text = _state.value.input.trim()
         if (text.isBlank()) return
 
-        val userMessage = messageUiMapper.createUserMessage(text)
+        val userMessage = messageUiFactory.createUserMessage(text)
         _state.update {
             it.copy(
                 messages = it.messages + userMessage,
@@ -127,25 +146,26 @@ class ChatViewModel @Inject constructor(
             )
         }
 
+        val settings = state.value.settings
         val config = ChatConfig(
-            provider = _state.value.provider,
-            model = _state.value.provider.defaultModel,
-            temperature = _state.value.temperature,
-            topP = _state.value.topP,
-            useHistory = _state.value.useHistory,
+            provider = settings.provider,
+            temperature = settings.temperature,
+            topP = settings.topP,
+            maxTokens = settings.maxTokens,
+            useHistory = settings.useHistory
         )
 
-        val promptText = getPrompt(_state.value.currentPromptType)
+        val promptType = settings.currentPromptType
 
         viewModelScope.launch {
             val result = sendQuestionUseCase(
                 userMessage = text,
-                systemPrompt = promptText,
+                systemPrompt = getPromptUseCase(promptType),
                 config = config
             )
 
             result.onSuccess { response ->
-                val botMessage = messageUiMapper.createBotMessage(response)
+                val botMessage = messageUiFactory.createBotMessage(response)
 
                 _state.update { currentState ->
                     val updatedMessages = currentState.messages.map { msg ->
@@ -157,7 +177,7 @@ class ChatViewModel @Inject constructor(
                     )
                 }
             }.onFailure { error ->
-                val errorMessage = messageUiMapper.createErrorMessage(error)
+                val errorMessage = messageUiFactory.createErrorMessage(error)
                 _state.update {
                     it.copy(
                         messages = it.messages + errorMessage,
@@ -178,10 +198,5 @@ class ChatViewModel @Inject constructor(
             _state.update { state -> state.copy(input = it) }
             sendQuestion()
         }
-    }
-
-    private fun getPrompt(type: PromptType): String = when (type) {
-        PromptType.PROFESSIONAL -> promptRepository.getFsmPrompt()
-        PromptType.CREATIVE -> promptRepository.getCreativePrompt()
     }
 }

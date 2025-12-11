@@ -1,4 +1,4 @@
-package com.example.aichathelp.ui.screen.chat
+package com.example.aichathelp.ui.screen.chat.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -18,9 +18,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MaterialTheme.colorScheme
+import androidx.compose.material3.MaterialTheme.typography
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
@@ -30,6 +31,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -40,6 +49,7 @@ import androidx.compose.ui.zIndex
 import com.example.aichathelp.R
 import com.example.aichathelp.domain.model.PromptType
 import com.example.aichathelp.ui.theme.AiChatHelpTheme
+import com.example.aichathelp.ui.theme.MediumSeaGreen
 
 @Composable
 fun SettingsDialog(
@@ -84,7 +94,7 @@ fun SettingsDialog(
                 ) {
                     Text(
                         text = "Настройки AI",
-                        style = MaterialTheme.typography.titleMedium,
+                        style = typography.titleMedium,
                         modifier = Modifier.align(Alignment.CenterHorizontally)
                     )
 
@@ -92,9 +102,10 @@ fun SettingsDialog(
 
                     Text(
                         text = "System prompt:",
+                        style = typography.bodyLarge,
                         modifier = Modifier.padding(start = 8.dp)
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
@@ -121,38 +132,31 @@ fun SettingsDialog(
                     Spacer(modifier = Modifier.height(16.dp))
 
                     Text(
-                        text = "Температура (creativity): ${"%.1f".format(temperature)}",
+                        text = "\uD83C\uDF21\uFE0FТемпература (creativity): ${"%.1f".format(temperature)}",
+                        style = typography.bodyLarge,
                         modifier = Modifier.padding(start = 8.dp)
                     )
-                    Slider(
+                    CustomGradientSlider(
                         value = temperature.toFloat(),
-                        onValueChange = { onTemperatureChanged(it.toDouble()) },
-                        valueRange = 0.2f..1.4f,
-                        steps = 12,
-                        colors = SliderDefaults.colors(
-                            thumbColor = colorScheme.primary,
-                            activeTickColor = colorScheme.onPrimary.copy(alpha = 0.2f),
-                            activeTrackColor = colorScheme.primary,
-                            inactiveTrackColor = colorScheme.surface,
-                            inactiveTickColor = colorScheme.onPrimary,
-                        )
+                        onValueChange = { onTemperatureChanged(it.toDouble()) }
                     )
 
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Text(
-                        text = "Top P (diversity): ${"%.1f".format(topP)}",
+                        text = "\uD83C\uDFB2 Top P (diversity): ${"%.1f".format(topP)}",
+                        style = typography.bodyLarge,
                         modifier = Modifier.padding(start = 8.dp)
                     )
                     Slider(
                         value = topP.toFloat(),
                         onValueChange = { onTopPChanged(it.toDouble()) },
                         valueRange = 0.2f..1.0f,
-                        steps = 7,
+                        steps = 0,
                         colors = SliderDefaults.colors(
-                            thumbColor = colorScheme.primary,
+                            thumbColor = colorScheme.secondary,
                             activeTickColor = colorScheme.onPrimary.copy(alpha = 0.2f),
-                            activeTrackColor = colorScheme.primary,
+                            activeTrackColor = colorScheme.secondary,
                             inactiveTrackColor = colorScheme.surface,
                             inactiveTickColor = colorScheme.onPrimary,
                         )
@@ -198,6 +202,77 @@ fun SettingsDialog(
             }
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CustomGradientSlider(
+    value: Float,
+    onValueChange: (Float) -> Unit,
+    valueRange: ClosedFloatingPointRange<Float> = 0.2f..1.4f,
+    gradientColors: List<Color> = listOf(colorScheme.secondary, MediumSeaGreen, colorScheme.error),
+) {
+    val min = valueRange.start
+    val max = valueRange.endInclusive
+    val t = ((value - min) / (max - min)).coerceIn(0f, 1f)
+
+    val trackHeight = 10.dp
+    val thumbWidth = 6.dp
+
+    val density = LocalDensity.current
+    val trackPx = with(density) { trackHeight.toPx() }
+    val halfThumbPx = with(density) { (thumbWidth / 2).toPx() }
+
+    val gradient = Brush.horizontalGradient(gradientColors)
+
+    val thumbColor = when {
+        t < 1f / 3 -> lerp(gradientColors[0], gradientColors[1], t * 3)
+        t < 2f / 3 -> lerp(gradientColors[1], gradientColors[2], (t - 1f/3) * 3)
+        else -> gradientColors.last()
+    }
+
+    Slider(
+        value = value,
+        onValueChange = onValueChange,
+        valueRange = min..max,
+        modifier = Modifier
+            .height(50.dp)
+            .drawBehind {
+
+                val centerY = size.height / 2f
+
+                val trackEnd = size.width - halfThumbPx
+                val trackWidth = trackEnd - halfThumbPx
+
+                val activeWidth = trackWidth * t
+
+                drawRoundRect(
+                    color = Color.LightGray.copy(alpha = 0.5f),
+                    topLeft = Offset(halfThumbPx, centerY - trackPx / 2),
+                    size = Size(trackWidth, trackPx),
+                    cornerRadius = CornerRadius(trackPx / 2)
+                )
+
+                drawRoundRect(
+                    brush = gradient,
+                    topLeft = Offset(halfThumbPx, centerY - trackPx / 2),
+                    size = Size(activeWidth, trackPx),
+                    cornerRadius = CornerRadius(trackPx / 2)
+                )
+            },
+        colors = SliderDefaults.colors(
+            thumbColor = Color.Transparent,
+            activeTrackColor = Color.Transparent,
+            inactiveTrackColor = Color.Transparent
+        ),
+        thumb = {
+            Box(
+                modifier = Modifier
+                    .size(20.dp)
+                    .background(thumbColor, CircleShape)
+            )
+        }
+    )
 }
 
 @Composable

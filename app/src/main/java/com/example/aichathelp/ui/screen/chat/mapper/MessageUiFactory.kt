@@ -8,7 +8,7 @@ import java.time.LocalDateTime
 import java.util.UUID
 import javax.inject.Inject
 
-class MessageUiMapper @Inject constructor() {
+class MessageUiFactory @Inject constructor() {
 
     fun createUserMessage(text: String): MessageUi {
         return MessageUi(

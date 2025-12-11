@@ -1,4 +1,4 @@
-package com.example.aichathelp.ui.screen.chat
+package com.example.aichathelp.ui.screen.chat.components
 
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState

@@ -14,9 +14,6 @@ data class ChatConfig(
 ) {
     companion object {
         fun default(provider: ModelVendor = ModelVendor.PERPLEXITY) =
-            ChatConfig(provider = provider, model = provider.defaultModel)
-
-        fun creative(provider: ModelVendor = ModelVendor.PERPLEXITY) =
             ChatConfig(provider = provider, model = provider.defaultModel, temperature = 0.6, topP = 0.9)
 
     }
