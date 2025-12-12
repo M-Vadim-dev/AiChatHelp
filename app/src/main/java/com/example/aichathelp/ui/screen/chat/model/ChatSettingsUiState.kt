@@ -11,4 +11,5 @@ data class ChatSettingsUiState(
     val topP: Double,
     val maxTokens: Int,
     val useHistory: Boolean = true,
+    val useSummaryCompression: Boolean = true,
 )

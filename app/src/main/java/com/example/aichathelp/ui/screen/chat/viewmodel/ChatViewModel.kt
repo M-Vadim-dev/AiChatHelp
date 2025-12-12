@@ -73,12 +73,13 @@ class ChatViewModel @Inject constructor(
     private fun loadChatHistory() {
         viewModelScope.launch {
             val history = getChatHistoryUseCase()
-            _state.update {
-                it.copy(messages = chatMessageUiMapper.toUi(history))
+            val uiMessages = chatMessageUiMapper.toUi(history)
+            val finalMessages = if (history.isEmpty()) {
+                listOf(messageUiFactory.createWelcomeMessage())
+            } else {
+                uiMessages
             }
-            if (history.isEmpty()) {
-                _state.update { it.copy(messages = it.messages + messageUiFactory.createWelcomeMessage()) }
-            }
+            _state.update { it.copy(messages = finalMessages) }
         }
     }
 
@@ -89,8 +90,8 @@ class ChatViewModel @Inject constructor(
     private fun updateProvider(provider: ModelVendor) {
         viewModelScope.launch {
             _state.update { it.copy(settings = it.settings.copy(provider = provider)) }
-            clearChatHistoryUseCase()
-            _state.update { it.copy(messages = listOf(messageUiFactory.createWelcomeMessage()), input = "", error = null, isLoading = false) }
+//            clearChatHistoryUseCase()
+//            _state.update { it.copy(messages = listOf(messageUiFactory.createWelcomeMessage()), input = "", error = null, isLoading = false) }
         }
     }
 

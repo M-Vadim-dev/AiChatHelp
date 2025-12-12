@@ -316,7 +316,7 @@ private fun ChatScreenContent(
                             MessageItem(
                                 message = message,
                                 onRetry = onRetryClick,
-                                isNew = message.id == messages.lastOrNull()?.id,
+                                isNew = true,
                             )
                         }
                     }

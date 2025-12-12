@@ -11,6 +11,7 @@ data class ChatConfig(
     val returnImages: Boolean = false,
     val returnRelatedQuestions: Boolean = false,
     val useHistory: Boolean = true,
+    val useSummaryCompression: Boolean = true,
 ) {
     companion object {
         fun default(provider: ModelVendor = ModelVendor.PERPLEXITY) =

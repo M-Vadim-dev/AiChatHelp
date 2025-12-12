@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import com.example.aichathelp.data.local.ChatDatabase
 import com.example.aichathelp.data.local.dao.ChatMessageDao
+import com.example.aichathelp.data.local.dao.ChatSummaryDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -22,4 +23,7 @@ object DatabaseModule {
 
     @Provides
     fun provideChatDao(db: ChatDatabase): ChatMessageDao = db.chatMessageDao()
+
+    @Provides
+    fun provideChatSummaryDao(db: ChatDatabase): ChatSummaryDao = db.chatSummaryDao()
 }
