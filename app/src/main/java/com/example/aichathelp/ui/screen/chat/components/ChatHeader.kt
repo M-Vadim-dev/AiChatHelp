@@ -42,11 +42,10 @@ import com.example.aichathelp.domain.model.ModelVendor
 @Composable
 fun ChatHeader(
     currentProvider: ModelVendor,
-    onClearChat: () -> Unit,
-    isChatEmpty: Boolean,
     onSettings: () -> Unit,
     onProviderSelected: (ModelVendor) -> Unit,
     onToggleTokenPanel: () -> Unit,
+    onToggleHistoryPanel: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -80,29 +79,30 @@ fun ChatHeader(
 
         Spacer(modifier = Modifier.weight(1f))
 
-        IconButton(onClick = onClearChat, enabled = !isChatEmpty) {
+        IconButton(onClick = onToggleHistoryPanel) {
             Icon(
-                painter = painterResource(R.drawable.ic_trash_outline),
+                painter = painterResource(R.drawable.ic_settings_chat),
                 contentDescription = null,
-                tint = if (isChatEmpty) colorScheme.surfaceVariant else colorScheme.onBackground,
+                tint = colorScheme.onSurface,
                 modifier = Modifier.size(28.dp)
             )
         }
 
-        IconButton(onClick = onToggleTokenPanel, enabled = !isChatEmpty) {
+        IconButton(onClick = onToggleTokenPanel) {
             Icon(
-                painter = painterResource(R.drawable.ic_tokens_outline),
+                painter = painterResource(R.drawable.ic_settings_horizontal),
                 contentDescription = null,
-                tint = if (isChatEmpty) colorScheme.surfaceVariant else colorScheme.onBackground,
-                modifier = Modifier.size(28.dp)
+                tint = colorScheme.onSurface,
+                modifier = Modifier.size(24.dp)
             )
         }
 
         IconButton(onClick = onSettings) {
             Icon(
-                painter = painterResource(R.drawable.ic_more),
+                painter = painterResource(R.drawable.ic_settings),
                 contentDescription = null,
-                tint = colorScheme.onBackground,
+                tint = colorScheme.onSurface,
+                modifier = Modifier.size(28.dp)
             )
         }
     }

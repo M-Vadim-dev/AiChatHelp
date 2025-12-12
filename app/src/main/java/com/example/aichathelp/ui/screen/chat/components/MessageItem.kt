@@ -126,7 +126,8 @@ fun MessageItem(
                     ) {
                         Box {
                             Icon(
-                                painter = painterResource(id = R.drawable.ic_tokens),
+                                painter = if (showTokenMenu) painterResource(id = R.drawable.ic_tokens)
+                                else painterResource(id = R.drawable.ic_tokens_outline),
                                 contentDescription = null,
                                 modifier = Modifier
                                     .clip(CircleShape)
@@ -153,7 +154,7 @@ fun MessageItem(
                                     onClick = { showTokenMenu = false }
                                 )
                                 InfoDropdownItem(
-                                    iconRes = R.drawable.ic_tokens,
+                                    iconRes = R.drawable.ic_autosum,
                                     label = "Total Tokens:",
                                     value = "${message.totalTokens}",
                                     onClick = { showTokenMenu = false }
@@ -191,13 +192,13 @@ fun MessageItem(
                                     onClick = { showCostMenu = false }
                                 )
                                 InfoDropdownItem(
-                                    iconRes = R.drawable.ic_dollar_circle,
+                                    iconRes = R.drawable.ic_dollar_circle_outline,
                                     label = "Request Cost:",
                                     value = "${message.requestCost}",
                                     onClick = { showCostMenu = false }
                                 )
                                 InfoDropdownItem(
-                                    iconRes = R.drawable.ic_dollar_circle,
+                                    iconRes = R.drawable.ic_autosum,
                                     label = "Total Cost:",
                                     value = "${message.totalCost}",
                                     onClick = { showCostMenu = false }
@@ -289,7 +290,7 @@ private fun Avatar(isUser: Boolean) {
             Icon(
                 painter = painterResource(R.drawable.ic_person),
                 contentDescription = null,
-                tint = colorScheme.surfaceVariant,
+                tint = colorScheme.onSurface,
                 modifier = Modifier.size(24.dp)
             )
         } else {

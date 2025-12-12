@@ -146,6 +146,7 @@ private fun ChatScreenContent(
     val hazeState = rememberHazeState(true)
 
     var showTokenPanel by rememberSaveable { mutableStateOf(false) }
+    var showHistoryPanel by rememberSaveable { mutableStateOf(false) }
     var maxTokens by rememberSaveable { mutableFloatStateOf(provider.maxTokens.toFloat()) }
 
     Scaffold(
@@ -218,6 +219,65 @@ private fun ChatScreenContent(
                     modifier = Modifier.weight(1f)
                 )
             }
+
+            Row(
+                modifier = Modifier
+                    .padding(horizontal = 8.dp)
+                    .zIndex(0f)
+                    .fillMaxWidth()
+                    .padding(top = fullHeaderHeight)
+                    .height(panelHeight)
+                    .offset(y = offsetY)
+                    .shadow(
+                        elevation = 4.dp,
+                        shape = RoundedCornerShape(bottomStart = 16.dp, bottomEnd = 16.dp),
+                        clip = false
+                    )
+                    .clip(RoundedCornerShape(bottomStart = 16.dp, bottomEnd = 16.dp))
+                    .hazeEffect(
+                        hazeState,
+                        HazeStyle(
+                            blurRadius = 8.dp,
+                            backgroundColor = colorScheme.background,
+                            tint = HazeTint(colorScheme.background.copy(alpha = 0.8f))
+                        )
+                    )
+                    .background(
+                        brush = Brush.verticalGradient(
+                            colorStops = arrayOf(
+                                0.0f to colorScheme.tertiaryContainer,
+                                0.1f to colorScheme.tertiaryContainer.copy(alpha = 0.5f),
+                                0.2f to Color.Transparent,
+                                1.0f to Color.Transparent
+                            )
+                        )
+                    )
+                    .padding(horizontal = 24.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Max tokens: ${maxTokens.toInt()}",
+                    color = colorScheme.onBackground
+                )
+                Spacer(Modifier.width(16.dp))
+                Slider(
+                    value = maxTokens,
+                    onValueChange = {
+                        maxTokens = it
+                        onMaxTokensChanged(it.toInt())
+                    },
+                    valueRange = 50f..provider.maxAllowedTokens.toFloat(),
+                    colors = SliderDefaults.colors(
+                        thumbColor = colorScheme.secondary,
+                        activeTickColor = colorScheme.secondary,
+                        activeTrackColor = colorScheme.secondary,
+                        inactiveTrackColor = colorScheme.surface,
+                        inactiveTickColor = colorScheme.surface,
+                    ),
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -232,11 +292,10 @@ private fun ChatScreenContent(
             ) {
                 ChatHeader(
                     currentProvider = provider,
-                    onClearChat = onClearChatClick,
                     onSettings = onSettingsClick,
-                    isChatEmpty = messages.isEmpty(),
                     onProviderSelected = onProviderChange,
                     onToggleTokenPanel = { showTokenPanel = !showTokenPanel },
+                    onToggleHistoryPanel = { showHistoryPanel = !showHistoryPanel },
                     modifier = Modifier
                         .zIndex(1f)
                         .align(Alignment.TopStart)
@@ -372,9 +431,10 @@ private fun MessageInput(
                 ),
             leadingIcon = {
                 Icon(
-                    painter = painterResource(R.drawable.ic_smile),
+                    painter = painterResource(R.drawable.ic_add_circle),
                     contentDescription = null,
-                    tint = colorScheme.surfaceVariant
+                    tint = colorScheme.surfaceVariant,
+                    modifier = Modifier.size(34.dp)
                 )
             },
             trailingIcon = {
@@ -385,7 +445,7 @@ private fun MessageInput(
                                 painter = painterResource(R.drawable.ic_paperclip),
                                 contentDescription = null,
                                 tint = colorScheme.surfaceVariant,
-                                modifier = Modifier.size(28.dp)
+                                modifier = Modifier.size(26.dp)
                             )
                         }
                     }
