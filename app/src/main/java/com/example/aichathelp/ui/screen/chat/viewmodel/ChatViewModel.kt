@@ -56,6 +56,7 @@ class ChatViewModel @Inject constructor(
             is ChatIntent.ProviderChanged -> updateProvider(intent.provider)
             is ChatIntent.MaxTokensChanged -> updateMaxTokens(intent.value)
             is ChatIntent.UseHistoryChanged -> updateUseHistory(intent.value)
+            is ChatIntent.UseSummaryCompressionChanged -> updateUseSummaryCompression(intent.value)
         }
     }
 
@@ -85,6 +86,17 @@ class ChatViewModel @Inject constructor(
 
     private fun updatePromptType(type: PromptType) {
         _state.update { it.copy(settings = it.settings.copy(currentPromptType = type)) }
+    }
+
+    private fun updateUseSummaryCompression(value: Boolean) {
+        _state.update { currentState ->
+            val newValue = if (!currentState.settings.useHistory) false else value
+            currentState.copy(
+                settings = currentState.settings.copy(
+                    useSummaryCompression = newValue
+                )
+            )
+        }
     }
 
     private fun updateProvider(provider: ModelVendor) {
@@ -130,7 +142,14 @@ class ChatViewModel @Inject constructor(
     }
 
     private fun updateUseHistory(value: Boolean) {
-        _state.update { it.copy(settings = it.settings.copy(useHistory = value)) }
+        _state.update { currentState ->
+            currentState.copy(
+                settings = currentState.settings.copy(
+                    useHistory = value,
+                    useSummaryCompression = if (value) currentState.settings.useSummaryCompression else false
+                )
+            )
+        }
     }
 
     private fun sendQuestion() {

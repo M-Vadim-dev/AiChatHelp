@@ -51,14 +51,14 @@ fun ChatHeader(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(horizontal = 16.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Spacer(modifier = Modifier.width(8.dp))
 
         Box(
             modifier = Modifier
-                .size(36.dp)
+                .size(32.dp)
                 .background(colorScheme.primary, CircleShape),
             contentAlignment = Alignment.Center
         ) {

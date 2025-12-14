@@ -282,7 +282,7 @@ private fun getTextColor(message: MessageUi): Color = when {
 private fun Avatar(isUser: Boolean) {
     Box(
         modifier = Modifier
-            .size(36.dp)
+            .size(32.dp)
             .background(if (isUser) colorScheme.surface else colorScheme.primary, CircleShape),
         contentAlignment = Alignment.Center
     ) {

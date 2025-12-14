@@ -21,7 +21,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -35,8 +35,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
@@ -51,8 +49,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -68,8 +64,10 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.example.aichathelp.R
 import com.example.aichathelp.domain.model.ModelVendor
 import com.example.aichathelp.ui.screen.chat.components.ChatHeader
+import com.example.aichathelp.ui.screen.chat.components.HistoryPanel
 import com.example.aichathelp.ui.screen.chat.components.MessageItem
 import com.example.aichathelp.ui.screen.chat.components.SettingsDialog
+import com.example.aichathelp.ui.screen.chat.components.SettingsPanel
 import com.example.aichathelp.ui.screen.chat.model.ChatIntent
 import com.example.aichathelp.ui.screen.chat.model.MessageUi
 import com.example.aichathelp.ui.screen.chat.viewmodel.ChatViewModel
@@ -102,6 +100,16 @@ fun ChatScreen(
         loading = state.isLoading,
         input = state.input,
         provider = state.settings.provider,
+        useHistory = state.settings.useHistory,
+        onUseHistoryChange = { viewModel.onIntent(ChatIntent.UseHistoryChanged(it)) },
+        useSummaryCompression = state.settings.useSummaryCompression,
+        onUseSummaryCompressionChange = {
+            viewModel.onIntent(
+                ChatIntent.UseSummaryCompressionChanged(
+                    it
+                )
+            )
+        },
         onInputChange = { viewModel.onIntent(ChatIntent.InputChanged(it)) },
         onSendClick = { viewModel.onIntent(ChatIntent.SendClicked) },
         onRetryClick = { viewModel.onIntent(ChatIntent.RetryClicked) },
@@ -134,6 +142,10 @@ private fun ChatScreenContent(
     loading: Boolean,
     input: String,
     provider: ModelVendor,
+    useHistory: Boolean,
+    onUseHistoryChange: (Boolean) -> Unit,
+    useSummaryCompression: Boolean,
+    onUseSummaryCompressionChange: (Boolean) -> Unit,
     onInputChange: (String) -> Unit,
     onSendClick: () -> Unit,
     onRetryClick: (MessageUi) -> Unit,
@@ -145,11 +157,14 @@ private fun ChatScreenContent(
 ) {
     val hazeState = rememberHazeState(true)
 
+    val focusManager = LocalFocusManager.current
+
     var showTokenPanel by rememberSaveable { mutableStateOf(false) }
     var showHistoryPanel by rememberSaveable { mutableStateOf(false) }
     var maxTokens by rememberSaveable { mutableFloatStateOf(provider.maxTokens.toFloat()) }
 
     Scaffold(
+        contentWindowInsets = WindowInsets.systemBars,
         topBar = {
 
             val statusBarPadding = WindowInsets.statusBars
@@ -158,123 +173,50 @@ private fun ChatScreenContent(
 
             val headerHeight = 64.dp
             val fullHeaderHeight = statusBarPadding + headerHeight
-            val panelHeight = 90.dp
 
-            val offsetY by animateDpAsState(targetValue = if (showTokenPanel) 0.dp else -panelHeight)
+            Box {
+                Spacer(modifier = Modifier.height(fullHeaderHeight))
 
-            Row(
-                modifier = Modifier
-                    .padding(horizontal = 8.dp)
-                    .zIndex(0f)
-                    .fillMaxWidth()
-                    .padding(top = fullHeaderHeight)
-                    .height(panelHeight)
-                    .offset(y = offsetY)
-                    .shadow(
-                        elevation = 4.dp,
-                        shape = RoundedCornerShape(bottomStart = 16.dp, bottomEnd = 16.dp),
-                        clip = false
-                    )
-                    .clip(RoundedCornerShape(bottomStart = 16.dp, bottomEnd = 16.dp))
-                    .hazeEffect(
-                        hazeState,
-                        HazeStyle(
-                            blurRadius = 8.dp,
-                            backgroundColor = colorScheme.background,
-                            tint = HazeTint(colorScheme.background.copy(alpha = 0.8f))
-                        )
-                    )
-                    .background(
-                        brush = Brush.verticalGradient(
-                            colorStops = arrayOf(
-                                0.0f to colorScheme.tertiaryContainer,
-                                0.1f to colorScheme.tertiaryContainer.copy(alpha = 0.5f),
-                                0.2f to Color.Transparent,
-                                1.0f to Color.Transparent
-                            )
-                        )
-                    )
-                    .padding(horizontal = 24.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Max tokens: ${maxTokens.toInt()}",
-                    color = colorScheme.onBackground
+                val settingsHeight = 90.dp
+                val settingsOffset by animateDpAsState(
+                    if (showTokenPanel) fullHeaderHeight
+                    else fullHeaderHeight - settingsHeight
                 )
-                Spacer(Modifier.width(16.dp))
-                Slider(
-                    value = maxTokens,
+
+                SettingsPanel(
+                    height = settingsHeight,
+                    visible = showTokenPanel,
+                    hazeState = hazeState,
+                    maxTokens = maxTokens,
+                    maxAllowed = provider.maxAllowedTokens,
                     onValueChange = {
                         maxTokens = it
                         onMaxTokensChanged(it.toInt())
                     },
-                    valueRange = 50f..provider.maxAllowedTokens.toFloat(),
-                    colors = SliderDefaults.colors(
-                        thumbColor = colorScheme.secondary,
-                        activeTickColor = colorScheme.secondary,
-                        activeTrackColor = colorScheme.secondary,
-                        inactiveTrackColor = colorScheme.surface,
-                        inactiveTickColor = colorScheme.surface,
-                    ),
-                    modifier = Modifier.weight(1f)
-                )
-            }
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .offset(y = settingsOffset)
 
-            Row(
-                modifier = Modifier
-                    .padding(horizontal = 8.dp)
-                    .zIndex(0f)
-                    .fillMaxWidth()
-                    .padding(top = fullHeaderHeight)
-                    .height(panelHeight)
-                    .offset(y = offsetY)
-                    .shadow(
-                        elevation = 4.dp,
-                        shape = RoundedCornerShape(bottomStart = 16.dp, bottomEnd = 16.dp),
-                        clip = false
-                    )
-                    .clip(RoundedCornerShape(bottomStart = 16.dp, bottomEnd = 16.dp))
-                    .hazeEffect(
-                        hazeState,
-                        HazeStyle(
-                            blurRadius = 8.dp,
-                            backgroundColor = colorScheme.background,
-                            tint = HazeTint(colorScheme.background.copy(alpha = 0.8f))
-                        )
-                    )
-                    .background(
-                        brush = Brush.verticalGradient(
-                            colorStops = arrayOf(
-                                0.0f to colorScheme.tertiaryContainer,
-                                0.1f to colorScheme.tertiaryContainer.copy(alpha = 0.5f),
-                                0.2f to Color.Transparent,
-                                1.0f to Color.Transparent
-                            )
-                        )
-                    )
-                    .padding(horizontal = 24.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Max tokens: ${maxTokens.toInt()}",
-                    color = colorScheme.onBackground
                 )
-                Spacer(Modifier.width(16.dp))
-                Slider(
-                    value = maxTokens,
-                    onValueChange = {
-                        maxTokens = it
-                        onMaxTokensChanged(it.toInt())
-                    },
-                    valueRange = 50f..provider.maxAllowedTokens.toFloat(),
-                    colors = SliderDefaults.colors(
-                        thumbColor = colorScheme.secondary,
-                        activeTickColor = colorScheme.secondary,
-                        activeTrackColor = colorScheme.secondary,
-                        inactiveTrackColor = colorScheme.surface,
-                        inactiveTickColor = colorScheme.surface,
-                    ),
-                    modifier = Modifier.weight(1f)
+
+                val historyHeight = 240.dp
+                val historyOffset by animateDpAsState(
+                    if (showHistoryPanel) fullHeaderHeight
+                    else fullHeaderHeight - historyHeight
+                )
+
+                HistoryPanel(
+                    height = historyHeight,
+                    visible = showHistoryPanel,
+                    hazeState = hazeState,
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .offset(y = historyOffset),
+                    onClearChat = onClearChatClick,
+                    useHistory = useHistory,
+                    onUseHistoryChange = onUseHistoryChange,
+                    useSummaryCompression = useSummaryCompression,
+                    onUseSummaryChange = onUseSummaryCompressionChange,
                 )
             }
 
@@ -294,8 +236,18 @@ private fun ChatScreenContent(
                     currentProvider = provider,
                     onSettings = onSettingsClick,
                     onProviderSelected = onProviderChange,
-                    onToggleTokenPanel = { showTokenPanel = !showTokenPanel },
-                    onToggleHistoryPanel = { showHistoryPanel = !showHistoryPanel },
+                    onToggleTokenPanel = {
+                        focusManager.clearFocus(force = true)
+
+                        showHistoryPanel = false
+                        showTokenPanel = !showTokenPanel
+                    },
+                    onToggleHistoryPanel = {
+                        focusManager.clearFocus(force = true)
+
+                        showTokenPanel = false
+                        showHistoryPanel = !showHistoryPanel
+                    },
                     modifier = Modifier
                         .zIndex(1f)
                         .align(Alignment.TopStart)
@@ -320,14 +272,19 @@ private fun ChatScreenContent(
                             tint = HazeTint(colorScheme.background.copy(alpha = 0.8f))
                         )
                     )
-                    .padding(start = 8.dp, end = 8.dp, top = 0.dp, bottom = 4.dp)
+                    .padding(start = 8.dp, end = 8.dp, top = 0.dp, bottom = 4.dp),
+                onFocusChanged = { focused ->
+                    if (focused) {
+                        showTokenPanel = false
+                        showHistoryPanel = false
+                    }
+                }
             )
-        },
+        }
     ) { innerPadding ->
         Box(
             modifier = modifier
                 .fillMaxSize()
-                .imePadding()
                 .background(
                     Brush.verticalGradient(
                         colorStops = arrayOf(
@@ -392,6 +349,7 @@ private fun MessageInput(
     onInputChange: (String) -> Unit,
     onSendClick: () -> Unit,
     sendingDisabled: Boolean,
+    onFocusChanged: (Boolean) -> Unit,
 ) {
     val focusManager = LocalFocusManager.current
     var isFocused by remember { mutableStateOf(false) }
@@ -399,6 +357,7 @@ private fun MessageInput(
     Row(
         modifier = modifier
             .fillMaxWidth()
+            .imePadding()
             .navigationBarsPadding(),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -407,7 +366,10 @@ private fun MessageInput(
             onValueChange = onInputChange,
             modifier = Modifier
                 .weight(1f)
-                .onFocusChanged { isFocused = it.isFocused },
+                .onFocusChanged {
+                    isFocused = it.isFocused
+                    onFocusChanged(it.isFocused)
+                },
             placeholder = { if (!isFocused) Text(stringResource(R.string.message_placeholder)) },
             singleLine = true,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
@@ -421,8 +383,8 @@ private fun MessageInput(
             colors = TextFieldDefaults.colors(
                 focusedContainerColor = colorScheme.surface.copy(alpha = 0.8f),
                 unfocusedContainerColor = colorScheme.surface.copy(alpha = 0.8f),
-                focusedPlaceholderColor = colorScheme.onSurfaceVariant,
-                unfocusedPlaceholderColor = colorScheme.onSurfaceVariant,
+                focusedPlaceholderColor = colorScheme.onSurface,
+                unfocusedPlaceholderColor = colorScheme.onSurface,
                 focusedIndicatorColor = Color.Transparent,
                 unfocusedIndicatorColor = Color.Transparent,
                 focusedTextColor = colorScheme.onSurface,
@@ -444,7 +406,7 @@ private fun MessageInput(
                             Icon(
                                 painter = painterResource(R.drawable.ic_paperclip),
                                 contentDescription = null,
-                                tint = colorScheme.surfaceVariant,
+                                tint = colorScheme.onSurface,
                                 modifier = Modifier.size(26.dp)
                             )
                         }
@@ -573,6 +535,10 @@ private fun ChatScreenContentPreview() {
             onProviderChange = {},
             onMaxTokensChanged = {},
             listState = rememberLazyListState(),
+            useHistory = true,
+            onUseHistoryChange = {},
+            useSummaryCompression = true,
+            onUseSummaryCompressionChange = {},
         )
     }
 }
